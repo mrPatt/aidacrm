@@ -1,0 +1,8 @@
+{
+	"jwtSecret" : "asdf",
+	"db" : {
+		"host": "localhost",
+		"user": "root",
+		"database": "amocrm"
+	}
+}
