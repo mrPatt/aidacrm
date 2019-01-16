@@ -9,13 +9,15 @@ var query = new Query(con);
 
 var router = express.Router();
 
-router.post('/asdf', async function(req, res){
-	console.log('asdf');
+var token = '';
+
+router.post('/contacts', async function(req, res){
+
 	try{
 		var axi = await axios('https://azim.amocrm.ru/api/v2/contacts', {
 			method: 'get',
 			headers: {
-				Cookie: `session_id=2dsf3jeumf7mghlm3cvkmrtjo1616do3ho3d58c3lopjpenjdra0`
+				Cookie: `session_id=${token}`
 			},
 			withCredentials: true
 		})
@@ -31,7 +33,7 @@ router.post('/asdf', async function(req, res){
 				selectUser = selectUser[0]
 				var insertUser = {insertId: selectUser.id};
 			}
-			console.log('asdf1');
+			
 			var iData = {name: data[i].name, created_at: new Date(data[i].created_at*1000), updated_at: new Date(data[i].updated_at*1000),
 						created_by: insertUser.insertId};
 			var insertContact = await query.insert({table: 'contacts', data: iData});
@@ -73,28 +75,44 @@ router.post('/asdf', async function(req, res){
 
 		res.send();
 	} catch(e){
-			console.log(e);
-			res.status(500).send();
+		console.log(e);
+		res.redirect(401, '/axios/auth');
 	}
 });
-/*
-router.post('/test', async function(req, res){
-	console.log('asdf')
-	try{
-		var axi = await axios('https://azim.amocrm.ru/api/v2/contacts?id=233682', {
-			method: 'get',
-			headers: {
-				Cookie: `session_id=2dsf3jeumf7mghlm3cvkmrtjo1616do3ho3d58c3lopjpenjdra0`
-			},
-			withCredentials: true
-		})
 
-		var data = axi.data._embedded.items;
-		console.log(data[0].custom_fields[0].values[0].value)
-		res.send();
+router.get('/auth', async function(req, res){
+
+	try{
+		var axi = await axios('https://azim.amocrm.ru/private/api/auth.php?type=json', {
+			method: 'post',
+			withCredentials: true,
+			data: {
+				USER_LOGIN: 'sd@aziaimport.kz',
+				USER_HASH: '8d287fef2df5800f515f0261353a4a8c'
+			}
+		});
+
+		if(axi.data.response.auth){
+			token = axi.headers['set-cookie'][0].split(' ')[0].split('=')[1].split(';')[0]
+			console.log(token)
+			res.send()
+		} else {
+			res.status(401).send()
+		}
+	} catch(e){
+		console.log(e);
+		res.status(500).send();
+	}
+})
+
+router.post('/test', async function(req, res){
+
+	try{
+		console.log('test')
+		res.redirect(300, '/axios/test2')
 	} catch(e){
 		res.status(500).send();
 	}
 })
-*/
+
 module.exports = router;
