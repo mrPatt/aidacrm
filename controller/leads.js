@@ -11,28 +11,7 @@ var query = new Query(conn);
 
 var router = express.Router();
 
-exports.newlead = async (req, res, next) => {
-	var data = req.body;
-
-	var table = req.params.table;
-	try{
-		await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
-				if(err){
-					res.status(401).send('Unauthorized user');
-				} else {
-					data.created_by = decoded.id;
-				}
-			});
-		var insert = await query.insert({table: table, data: data});
-		res.status(200).send('lead inserted');
-		console.log(insert);
-	} catch(e){
-		console.log(e.message);
-		next(e);
-	}
-}
-
-exports.newcontact = async (req, res, next) => {
+exports.lcc = async (req, res, next) => {
 	var data = req.body;
 	var table = req.params.table;
 	try{
@@ -44,27 +23,7 @@ exports.newcontact = async (req, res, next) => {
 				}
 			});
 		var insert = await query.insert({table: table, data: data});
-		res.status(200).send('contact inserted');
-		console.log(insert);
-	} catch(e){
-		console.log(e.message);
-		next(e);
-	}
-}
-
-exports.newcompany = async (req, res, next) => {
-	var data = req.body;
-	var table = req.params.table;
-	try{
-		await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
-				if(err){
-					res.status(401).send('Unauthorized user');
-				} else {
-					data.created_by = decoded.id;
-				}
-			});
-		var insert = await query.insert({table: table, data: data});
-		res.status(200).send('company inserted');
+		res.status(200).send();
 		console.log(insert);
 	} catch(e){
 		console.log(e.message);
@@ -106,7 +65,7 @@ exports.update = async (req, res, next) => {
 					data.created_by = decoded.id;
 				}
 			});
-		var update = await query.update({table: table,where: {id: data.id}, data: data});
+		var update = await query.update({table: table, where: {id: data.id}, data: data});
 		
 		res.status(200).send('updated')
 	} catch(e){

@@ -4,5 +4,14 @@
 		"host": "localhost",
 		"user": "root",
 		"database": "amocrm"
+	},
+
+	"transport" : {
+		"host": "smtp.ethereal.email",
+		"port": 587,
+		"auth": {
+			"user": "yci64owxndezz73u@ethereal.email",
+			"user": "reqHR9De1YZrHCcmCu"
+		}
 	}
 }
