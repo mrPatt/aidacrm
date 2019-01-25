@@ -36,11 +36,11 @@ exports.select = async (req, res, next) => {
 	var table = req.params.table;
 	var id = req.params.id;
 	try{
-		await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
+		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
 				if(err){
 					res.status(401).send('Unauthorized user');
 				}
-			});
+			});*/
 		var select = await query.select({table: table, data: data});
 		res.send(select);
 	} catch(e){

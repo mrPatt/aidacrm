@@ -8,12 +8,13 @@ var query = new Query(con);
 
 var router = express.Router();
 
-router.get('/api/:table/:id', async function(req, res){
+router.post('/api/:table', async function(req, res){
 	var table = req.params.table;
-	var id = req.params.id;
+	var id = req.body;
 	try{
-		var select = await query.select({table: table, where: {id: id}});
-		select = select[0];
+		var select = await query.select({table: table, where: {id: id.id}});
+
+		console.log(select)
 		res.send(select);
 	} catch(err){
 		console.log(err);
@@ -54,9 +55,9 @@ router.post('/api/where/:table/:from', async function(req, res){
 	var orderby = req.body.orderby;
 	try{
 		if(table=='leads'){
-			var select = await query.select({table: table, where: where, limit: {from: from, number: 20}, orderby: orderby});
+			var select = await query.select({table: table, where: where, limit: {from: from, number: 500}, orderby: orderby});
 		} else {
-			var select = await query.select({table: table, where: where, limit: {from: from, number: 20}});
+			var select = await query.select({table: table, where: where, limit: {from: from, number: 500}});
 		}	
 		res.send(select);
 	} catch(e){
