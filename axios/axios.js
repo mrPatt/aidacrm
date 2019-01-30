@@ -328,24 +328,31 @@ router.post('/leads', async function(req, res){
 
 				var selectPipe = await query.select({table: 'pipelines', where: {amo_id: `${data[i].pipeline.id}`}});
 
-				var selectMC = await query.select({table: 'contacts', where: {amo_id: `${data[i].main_contact.id}`}});
-				if(selectMC.length == 0){
-					var iMC = {name: 'loh_contact',amo_id: data[i].company.id};
-					var insertMC = {table: 'contacts', data: iMC}
-					console.log(iMC)
+				if(typeof data[i].main_contact.id != 'undefined'){
+						var selectMC = await query.select({table: 'contacts', where: {amo_id: data[i].main_contact.id}});
+						if(selectMC.length == 0){
+							var iMC = {name: 'loh_contact', amo_id: data[i].main_contact.id};
+							var insertMC = await query.insert({table: 'contacts', data: iMC});
+							console.log('===================================', iMC)
+						} else {
+							selectMC = selectMC[0]
+							var insertMC = {insertId: selectMC.id}
+						}
 				} else {
-					selectMC = selectMC[0]
-					var insertMC = {insertId: selectMC.id}
+					var insertMC = {insertId: null}
 				}
-
-				var selectLC = await query.select({table: 'leads_company', where: {amo_id:`${data[i].company.id}`}});
-				if(selectLC.length == 0){
-					var iLC = {name: 'loh_company',amo_id: data[i].company.id};
-					var insertLC = {table: 'leads_company', data: iLC}
-					console.log(iLC)
-				} else {
-					selectLC = selectLC[0];
-					var insertLC = {insertId: selectLC.id}
+				
+				if(typeof data[i].company.id != 'undefined'){
+					var selectLC = await query.select({table: 'leads_company', where: {amo_id:`${data[i].company.id}`}});
+					console.log(selectLC)
+					if(selectLC.length == 0){
+						var iLC = {name: 'loh_company', amo_id: data[i].company.id};
+						var insertLC = await query.insert({table: 'leads_company', data: iLC});
+						console.log('=====================================',iLC)
+					} else {
+						selectLC = selectLC[0]
+						var insertLC = {insertId: selectLC.id};
+					}
 				}
 
 				var selectLeads = await query.select({table: 'leads', where: {name: apos(data[i].name)}});
@@ -354,28 +361,30 @@ router.post('/leads', async function(req, res){
 								 updated_at: new Date(data[i].updated_at*1000),
 								 closed_at: new Date(data[i].closed_at*1000), created_by: insertUser.insertId,
 								 resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, amo_id: data[i].id, 
-								 status: selectStep[0].id, pipeline_id: selectPipe[0].id, main_contact_id: selectMC.insertId,
-								 leads_company_id: selectLC.insertId};
+								 status: selectStep[0].id, pipeline_id: selectPipe[0].id, main_contact_id: insertMC.insertId,
+								 leads_company_id: insertLC.insertId};
 					var insertLeads = await query.insert({table: 'leads', data: iData});
 					console.log(iData)
 				} else {
 					selectLeads = selectLeads[0];
 					var insertLeads = {insertId: selectLeads.id};
 				}
-
-					if(data[i].contacts.id)
+				console.log(data[i].contacts.id);
+				if(typeof data[i].contacts.id != 'undefined'){
 					for (var j = 0; j < data[i].contacts.id.length; j++) {
-						var selectContact = await query.select({table: 'contacts', where: {amo_id: `${data[i].contacts.id[j]}`}});
-						console.log(selectContact);
-						if(selectContact == 0){
-							selectContact = {}
-						} else {
-							console.log(selectContact[j])
-							var iContact = {contact_id: selectContact[0].id, leads_id: insertCompany.insertId};
-							var insertContact = await query.insert({table: 'leads_contacts', data: iContact});
+						if(typeof data[i].contacts.id[j] != 'undefined'){
+							var selectContact = await query.select({table: 'contacts', where: {amo_id: `${data[i].contacts.id[j]}`}});
+							console.log(selectContact);
+							if(selectContact == 0){
+								selectContact = {}
+							} else {
+								var iContact = {contact_id: selectContact[0].id, leads_id: insertLeads.insertId};
+								var insertContact = await query.insert({table: 'leads_contacts', data: iContact});
+								console.log(iContact)
+							}
 						}
 					}
-
+				}
 					for(var j=0; j<data[i].custom_fields.length; j++){
 						var selectCF = await query.select({table: 'custom_fields', where: {name: data[i].custom_fields[j].name}});
 						if(selectCF.length==0){
