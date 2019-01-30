@@ -61,7 +61,7 @@ router.post('/contacts', async function(req, res){
 	var a = 1;
 	try{
 		for(var f=0; f<36; f++){
-			await setTimeout(function(){console.log(a)}, 5000);
+			await setTimeout(function(){console.log(a)}, 1000);
 			var axi = await axios(`https://azim.amocrm.ru/api/v2/contacts?limit_rows=500&limit_offset=${a}`, {
 				method: 'get',
 				headers: {
@@ -162,7 +162,7 @@ router.post('/contacts', async function(req, res){
 				
 			}
 
-		
+		console.log('SUCCESS');
 		res.send();
 	} catch(e){
 		console.log(e);
@@ -174,7 +174,7 @@ router.post('/company', async function(req, res){
 	var a = 1
 	try{
 		for(var f=0; f<23; f++){
-			await setTimeout(function(){console.log(a)}, 5000);
+			await setTimeout(function(){console.log(a)}, 1000);
 			var axi = await axios(`https://azim.amocrm.ru/api/v2/companies?limit_rows=500&limit_offset=${a}`, {
 				method: 'get',
 				headers: {
@@ -282,6 +282,7 @@ router.post('/company', async function(req, res){
 					}
 					a = a + 500
 				}
+				console.log('SUCCESS');
 				res.send();
 			} catch(e){
 				console.log(e);
@@ -293,7 +294,7 @@ router.post('/leads', async function(req, res){
 	var a = 1;
 	try{
 		for(var f=0; f<28; f++){
-			await setTimeout(function(){console.log(a)}, 5000);
+			await setTimeout(function(){console.log(a)}, 1000);
 			var axi = await axios(`https://azim.amocrm.ru/api/v2/leads?limit_rows=500&limit_offset=${a}`, {
 				method: 'get',
 				headers: {
@@ -357,9 +358,13 @@ router.post('/leads', async function(req, res){
 
 				var selectLeads = await query.select({table: 'leads', where: {name: apos(data[i].name)}});
 				if(selectLeads.length==0){
+					var closed_at = null;
+					if(data[i].closed_at != 0){
+						closed_at = new Date(data[i].closed_at*1000);
+					}
 					var iData = {name: apos(data[i].name), created_at: new Date(data[i].created_at*1000),
 								 updated_at: new Date(data[i].updated_at*1000),
-								 closed_at: new Date(data[i].closed_at*1000), created_by: insertUser.insertId,
+								 closed_at: closed_at, created_by: insertUser.insertId,
 								 resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, amo_id: data[i].id, 
 								 status: selectStep[0].id, pipeline_id: selectPipe[0].id, main_contact_id: insertMC.insertId,
 								 leads_company_id: insertLC.insertId};
@@ -435,6 +440,7 @@ router.post('/leads', async function(req, res){
 					}
 					a = a + 500
 				}
+				console.log('SUCCESS');
 				res.send();
 			} catch(e){
 				console.log(e);
@@ -466,6 +472,7 @@ router.post('/pipeline', async function(req, res){
 					var insertStep = await query.insert({table: 'step', data: iStep})
 				}
 			}
+			console.log('SUCCESS');
 			res.send();
 		} catch(e){
 			console.log(e);
@@ -477,7 +484,7 @@ router.post('/task', async function(req, res){
 	var a = 1;
 	try{
 		for(var f=0; f<50; f++){
-			await setTimeout(function(){console.log(a)}, 5000);
+			await setTimeout(function(){console.log(a)}, 1000);
 			var axi = await axios(`https://azim.amocrm.ru/api/v2/tasks?limit_rows=500&limit_offset=${a}`, {
 				method: 'get',
 				headers: {
@@ -539,6 +546,7 @@ router.post('/task', async function(req, res){
 					}
 					a = a + 500;
 				}
+				console.log('SUCCESS');
 				res.send();
 			} catch(e){
 				console.log(e);
@@ -562,6 +570,7 @@ router.post('/groups', async function(req, res){
 			console.log(iGroup)
 			var insertGroup = await query.insert({table: 'users_group', data: iGroup});
 		}
+		console.log('SUCCESS');
 		res.send();
 	} catch(e){
 		console.log(e);
