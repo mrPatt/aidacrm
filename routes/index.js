@@ -55,9 +55,9 @@ router.post('/api/where/:table/:from', async function(req, res){
 	var orderby = req.body.orderby;
 	try{
 		if(table=='leads'){
-			var select = await query.select({table: table, where: where, limit: {from: from, number: 500}, orderby: orderby});
+			var select = await query.select({table: table, where: where, limit: {from: from, number: 20}, orderby: orderby});
 		} else {
-			var select = await query.select({table: table, where: where, limit: {from: from, number: 500}});
+			var select = await query.select({table: table, where: where, limit: {from: from, number: 20}});
 		}	
 		res.send(select);
 	} catch(e){
