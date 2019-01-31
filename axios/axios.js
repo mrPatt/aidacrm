@@ -508,7 +508,7 @@ router.post('/task', async function(req, res){
 				for(var j=0; j<data.length; j++){
 					var selectCF = await query.select({table: 'task_type', where: {name: data[i].task_type}});
 					if(selectCF.length==0){
-						var iCF = {name: data[i].task_type, group_id: 1}
+						var iCF = {name: data[i].task_type}
 						var insertCF = await query.insert({table: 'task_type', data: iCF});
 						console.log(iCF);
 					} else {
@@ -532,7 +532,7 @@ router.post('/task', async function(req, res){
 				var iData = {comment: data[i].text, created_at: new Date(data[i].created_at*1000), updated_at: new Date(data[i].updated_at*1000), 
 					complete_till: new Date(data[i].complete_till_at*1000), created_by: insertUser.insertId,
 					amo_id: data[i].id, resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, 
-					is_completed: data[i].is_completed, task_type: selectCF.id};
+					is_completed: data[i].is_completed, task_type: insertCF.insertId};
 						//console.log(iData)
 
 						var insertTask = await query.insert({table: 'task', data: iData});

@@ -17,8 +17,8 @@ var transporter = nodemailer.createTransport({
 const mailOptions = {
   from: 'yci64owxndezz73u@ethereal.email', // sender address
   to: 'sultik98@gmail.com', // list of receivers
-  subject: 'kek', // Subject line
-  html: '<p>kek</p>'// plain text body
+  subject: 'Мансур', // Subject line
+  html: '<p>чо палишь сука</p>'// plain text body
 };
 
 transporter.sendMail(mailOptions, function (err, info) {
