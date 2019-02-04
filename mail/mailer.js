@@ -29,6 +29,7 @@ router.post('/send', async function(req, res){
 		var select = await query.select({table: 'mail', where: {id: id}})
 		console.log(select)
 		for(var a=0; a<select.length; a++){
+
 			var transporter = nodemailer.createTransport({
 			host: select[a].smtp_host,
 			port: select[a].smtp_port,
@@ -50,10 +51,10 @@ router.post('/send', async function(req, res){
 			var insertData = await query.insert({table: 'messages', data: iData});
 
 				const mailOptions = {
-  				from: select[0].email, // sender address
-  				to: iData.toloh, // list of receivers
-  				subject: iData.subject, // Subject line
- 				html: iData.text// plain text body    
+  				from: `test <${select[0].email}>`, // sender address
+  				to: req.body.to, // list of receivers
+  				subject: req.body.subject, // Subject line
+ 				html: req.body.text// plain text body    
 
 				}
 				console.log(mailOptions);
