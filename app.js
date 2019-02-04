@@ -10,7 +10,8 @@ var usersRouter = require('./routes/users');
 var regRouter = require('./controller/registration');
 var lead = require('./routes/lead');
 var neww = require('./routes/new');
-var axios = require('./axios/axios')
+var axios = require('./axios/axios');
+var mail = require('./mail/mailer');
 
 var app = express();
 
@@ -38,6 +39,7 @@ app.use('/users', usersRouter);
 app.use('/leads', lead);
 app.use('/new', neww);
 app.use('/axios', axios);
+app.use('/mail', mail);
 
 	
 // catch 404 and forward to error handler

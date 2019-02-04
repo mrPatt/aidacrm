@@ -13,8 +13,9 @@ router.post('/api/:table', async function(req, res){
 	var id = req.body;
 	try{
 		var select = await query.select({table: table, where: {id: id.id}});
+		var select_count = await con.query(`select count(id) from ${table}`)
 
-		console.log(select)
+		console.log(select_count)
 		res.send(select);
 	} catch(err){
 		console.log(err);
@@ -97,6 +98,25 @@ router.post('/api/update/:table', async function(req, res){
 	} catch(e){
 		res.status(500).send();
 		throw new Error(e);
+	}
+})
+
+router.post('/api/count/:table', async function(req, res){
+	var table = req.params.table;
+	var where = req.body;
+	try{
+		if(where.id){
+			var select = await query.select({table: table, count: 'id', where: where})
+			console.log(select)
+			res.send(select)
+		} else {
+			var select = await query.select({table: table, count: 'id'})
+			console.log(select)
+			res.send(select)
+		}
+		
+	} catch(e){
+		console.log(e)
 	}
 })
 

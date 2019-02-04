@@ -1,6 +1,6 @@
 var Imap = require('imap'),
     inspect = require('util').inspect;
- require('https').globalAgent.options.ca = require('ssl-root-cas/latest').create();
+
 var imap = new Imap({
   user: 'sultik98@gmail.com',
   password: 'sfjqhikyliyhdrti',
