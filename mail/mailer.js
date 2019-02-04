@@ -17,7 +17,7 @@ router.post('/add', async function(req, res){
 		var insert = await query.insert({table: 'mail', data: data});
 		res.status(200).send(insert);
 	} catch(e){
-		console.log(e);
+		console.log(e.message);
 		res.send()
 	}
 });
@@ -73,7 +73,7 @@ router.post('/send', async function(req, res){
 		}
 		res.send(select)
 	} catch(e){
-		console.log(e);
+		console.log(e.message);
 		res.status(500).send();
 	};
 });
