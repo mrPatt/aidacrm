@@ -105,7 +105,7 @@ router.post('/api/count/:table', async function(req, res){
 	var table = req.params.table;
 	var where = req.body;
 	try{
-		if(where !== 'undefined'){
+		if(where != 'undefined'){
 			var select = await query.select({table: table, count: 'id', where: where})
 			console.log(select)
 			res.send(select)
