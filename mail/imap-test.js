@@ -1,61 +1,94 @@
-var Imap = require('imap'),
-    inspect = require('util').inspect;
+var imaps = require('imap-simple');
+var fs = require('fs');
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+ 
+var config = {
+    imap: {
+        user: 'space.walrus@mail.ru',
+        password: 'gjyxbr1998',
+        host: 'imap.mail.ru',
+        port: 993,
+        tls: true,
+        authTimeout: 3000
+    }
+};
+/*imaps.connect(config).then(function (connection) {
+ 
+    return connection.openBox('INBOX').then(function () {
+        var delay = 24 * 3600 * 1000;
+        var yesterday = new Date();
+        yesterday.setTime(Date.now() - delay);
+        yesterday = yesterday.toISOString();
+        var searchCriteria = ['ALL', ['SINCE', yesterday]];
+        
+ 
+        var fetchOptions = {
+            bodies: ['HEADER', 'TEXT'],
+            markSeen: false
+        };
+ 
+        return connection.search(searchCriteria, fetchOptions).then(function (results) {
+            var subjects = results.map(function (res) {
+                return res.parts.filter(function (part) {
+                    return part.which === 'HEADER';
+                })[0].body.subject[0];
+            });
+ 
+            console.log(subjects);
+            // =>
+            //   [ 'Hey Chad, long time no see!',
+            //     'Your amazon.com monthly statement',
+            //     'Hacker Newsletter Issue #445' ]
+        });
+    });
+});*/
 
-var imap = new Imap({
-  user: 'sultik98@gmail.com',
-  password: 'sfjqhikyliyhdrti',
-  host: 'imap.gmail.com',
-  port: 993,
-  tls: true
-});
+imaps.connect(config).then( function (connection) {
  
-function openInbox(cb) {
-  imap.openBox('INBOX', true, cb);
-}
+    connection.openBox('INBOX').then(function () {
  
-imap.once('ready', function() {
-  openInbox(function(err, box) {
-    if (err) throw err;
-    var f = imap.seq.fetch('1:3', {
-      bodies: 'HEADER.FIELDS (FROM TO SUBJECT DATE)',
-      struct: true
-    });
-    f.on('message', function(msg, seqno) {
-      console.log('Message #%d', seqno);
-      var prefix = '(#' + seqno + ') ';
-      msg.on('body', function(stream, info) {
-        var buffer = '';
-        stream.on('data', function(chunk) {
-          buffer += chunk.toString('utf8');
+        // Fetch emails from the last 24h
+        var delay = 24 * 3600 * 1000;
+        var yesterday = new Date();
+        yesterday.setTime(Date.now() - delay);
+        yesterday = yesterday.toISOString();
+        var searchCriteria = ['ALL', ['SINCE', yesterday]];
+        var fetchOptions = { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true };
+ 
+        // retrieve only the headers of the messages
+        return connection.search(searchCriteria, fetchOptions);
+    }).then(function (messages) {
+ 
+        var attachments = [];
+ 
+        messages.forEach( function (message) {
+            var parts = imaps.getParts(message.attributes.struct);
+            attachments = attachments.concat(parts.filter( function (part) {
+                return part.disposition && part.disposition.type.toUpperCase() === 'ATTACHMENT';
+                
+            }).map( function (part) {
+                
+                // retrieve the attachments only of the messages with attachments
+                return connection.getPartData(message, part)
+                    .then(async function (partData) {
+                        var path = './attachments';
+                        var name = part.disposition.params.filename;
+                        var data = partData;
+                        await fs.writeFileSync(path, name, data)
+                        return {
+                            filename: part.disposition.params.filename,
+                            data: partData
+                        };
+                    });
+            }));
         });
-        stream.once('end', function() {
-          console.log(prefix + 'Parsed header: %s', inspect(Imap.parseHeader(buffer)));
-        });
-      });
-      msg.once('attributes', function(attrs) {
-        console.log(prefix + 'Attributes: %s', inspect(attrs, false, 8));
-      });
-      msg.once('end', function() {
-        console.log(prefix + 'Finished');
-      });
-    });
-    f.once('error', function(err) {
-      console.log('Fetch error: ' + err);
-    });
-    f.once('end', function() {
-      console.log('Done fetching all messages!');
-      imap.end();
-    });
-  });
-});
  
-imap.once('error', function(err) {
-  console.log(err);
-});
- 
-imap.once('end', function() {
-  console.log('Connection ended');
-});
- 
-imap.connect();
-//sfjqhikyliyhdrti
+        return Promise.all(attachments);
+    }).then(function (attachments) {
+        console.log(attachments);
+        // =>
+        //    [ { filename: 'cats.jpg', data: Buffer() },
+        //      { filename: 'pay-stub.pdf', data: Buffer() } ]
+    });
+})
+//sniwsaohmkncqdic

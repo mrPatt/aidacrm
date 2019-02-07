@@ -58,7 +58,7 @@ router.post('/users', async function(req, res){
 
 router.post('/contacts', async function(req, res){
 	
-	var a = 1;
+	var a = 10000;
 	try{
 		for(var f=0; f<36; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
@@ -171,7 +171,7 @@ router.post('/contacts', async function(req, res){
 });
 
 router.post('/company', async function(req, res){
-	var a = 1
+	var a = 10000
 	try{
 		for(var f=0; f<23; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
@@ -293,7 +293,7 @@ router.post('/company', async function(req, res){
 router.post('/leads', async function(req, res){
 	var a = 1;
 	try{
-		for(var f=0; f<28; f++){
+		for(var f=0; f<32; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
 			var axi = await axios(`https://azim.amocrm.ru/api/v2/leads?limit_rows=500&limit_offset=${a}`, {
 				method: 'get',

@@ -105,7 +105,7 @@ router.post('/api/count/:table', async function(req, res){
 	var table = req.params.table;
 	var where = req.body;
 	try{
-		if(where.id){
+		if(where !== 'undefined'){
 			var select = await query.select({table: table, count: 'id', where: where})
 			console.log(select)
 			res.send(select)
@@ -115,6 +115,16 @@ router.post('/api/count/:table', async function(req, res){
 			res.send(select)
 		}
 		
+	} catch(e){
+		console.log(e)
+	}
+})
+
+router.post('/api/test', async function(req, res){
+	try{
+		var select = await query.select({table: 'leads', where: {id: {less: 1000, more: 500}}});
+		console.log(select)
+		res.send();
 	} catch(e){
 		console.log(e)
 	}

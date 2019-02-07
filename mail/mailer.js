@@ -1,6 +1,7 @@
 var nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt-nodejs');
-var imap = require('imap');
+var imaps = require('imap-simple');
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 var mysql = require('mysql');
 var express = require('express');
 var Query = require('node-mysql-ejq');
@@ -51,7 +52,7 @@ router.post('/send', async function(req, res){
 			var insertData = await query.insert({table: 'messages', data: iData});
 
 				const mailOptions = {
-  				from: `test <${select[0].email}>`, // sender address
+  				from: `${select[0].email}`, // sender address
   				to: req.body.to, // list of receivers
   				subject: req.body.subject, // Subject line
  				html: req.body.text// plain text body    
@@ -79,6 +80,12 @@ router.post('/send', async function(req, res){
 	};
 });
 
-
+router.post('/inbox', async function(req, res){
+	try{
+		res.send()
+	} catch(e){
+		res.send(e)
+	}
+})
 
 module.exports = router;
