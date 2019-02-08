@@ -52,7 +52,7 @@ imaps.connect(config).then( function (connection) {
         var yesterday = new Date();
         yesterday.setTime(Date.now() - delay);
         yesterday = yesterday.toISOString();
-        var searchCriteria = ['ALL', ['SINCE', yesterday]];
+        var searchCriteria = ['ALL'];
         var fetchOptions = { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true };
  
         // retrieve only the headers of the messages
@@ -71,10 +71,11 @@ imaps.connect(config).then( function (connection) {
                 // retrieve the attachments only of the messages with attachments
                 return connection.getPartData(message, part)
                     .then(async function (partData) {
-                        var path = './attachments';
-                        var name = part.disposition.params.filename;
-                        var data = partData;
-                        await fs.writeFileSync(path, name, data)
+                        let name = part.disposition.params.filename.split('.');
+                        name[0] += new Date().valueOf();
+                        if(name[1] == '') name[1] = 'txt';
+                        name = name[0] + '.' + name[1];
+                        fs.writeFileSync('../attachments/' + name, partData)
                         return {
                             filename: part.disposition.params.filename,
                             data: partData
