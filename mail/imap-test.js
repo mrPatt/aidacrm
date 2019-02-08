@@ -12,14 +12,14 @@ var config = {
         authTimeout: 3000
     }
 };
-/*imaps.connect(config).then(function (connection) {
+imaps.connect(config).then(function (connection) {
  
     return connection.openBox('INBOX').then(function () {
         var delay = 24 * 3600 * 1000;
         var yesterday = new Date();
         yesterday.setTime(Date.now() - delay);
         yesterday = yesterday.toISOString();
-        var searchCriteria = ['ALL', ['SINCE', yesterday]];
+        var searchCriteria = ['ALL'];
         
  
         var fetchOptions = {
@@ -41,9 +41,9 @@ var config = {
             //     'Hacker Newsletter Issue #445' ]
         });
     });
-});*/
+});
 
-imaps.connect(config).then( function (connection) {
+/*imaps.connect(config).then( function (connection) {
  
     connection.openBox('INBOX').then(function () {
  
@@ -91,5 +91,5 @@ imaps.connect(config).then( function (connection) {
         //    [ { filename: 'cats.jpg', data: Buffer() },
         //      { filename: 'pay-stub.pdf', data: Buffer() } ]
     });
-})
+})*/
 //sniwsaohmkncqdic

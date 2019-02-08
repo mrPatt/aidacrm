@@ -3,6 +3,7 @@ var mysql = require('mysql');
 var express = require('express');
 var Query = require('node-mysql-ejq');
 var config = require('../config/config');
+var cheerio = require('cherio');
 var con = mysql.createConnection(config.db);
 
 var query = new Query(con);
@@ -448,6 +449,71 @@ router.post('/leads', async function(req, res){
 			}
 			
 		});
+
+router.get('/budget', async function(req, res){
+	var a = await con.query(`SELECT amo_id FROM amocrm.leads`);
+	var budget = [];
+
+	for(var f = 0; f < a.length; f++){
+		try {
+			var leads  = a[f];
+    		var axi = await axios(`https://azim.amocrm.ru/leads/detail/${leads.amo_id}`, {
+				method: 'get',
+				headers: {
+					Cookie: `session_id=${token}`
+				},
+				withCredentials: true
+			});
+			var $ = cheerio.load(axi.data);
+            var budget = $('#lead_card_budget').val();
+            var str = budget.replace(/\s/g, '');
+            if(str != ''){
+            	var vitalya_pidor = await con.query(`UPDATE leads SET budget = ${str} WHERE amo_id = ${leads.amo_id}`)
+            } else{
+            	console.log(str)
+            }
+            
+            console.log(f, str);
+           
+    		res.send()
+   		} catch (e) {
+       		console.log(e)
+    	}
+	}
+    
+})
+
+/*const cheerio = require('cherio')
+   
+    try {
+
+        let idLeads =  await db.asyncConnectDB('dashboard_whitecube',SELECT id FROM dashboard_whitecube.amo_leads)
+        let budgets = [];
+        for (let i = 0; i < idLeads.length; i++) {
+            const lead = idLeads[i];
+            let result = await axios.get(`https://whitecube2.amocrm.ru/leads/detail/${lead.id}`,{//https://whitecube2.amocrm.ru/api/v2/leads
+                headers:{
+                    Cookie: req.headers.cookie
+                }
+            });
+            let $ = cheerio.load(result.data);
+            let budget = $('#lead_card_budget').val();
+            console.log(i, budget);
+            budgets.push({ id: lead.id, budget });
+        }
+            
+        const fs = require('fs');
+
+        fs.appendFile(logs/budget.txt, JSON.stringify(budgets), (err) => {
+            if (err) throw err;
+            console.log('Saved!');
+        });
+        //console.log(result.data);
+        //res.status(200).send(budgets);
+
+    } catch (e) {
+       console.log("e")
+    }*/
 
 router.post('/pipeline', async function(req, res){
 	try{
