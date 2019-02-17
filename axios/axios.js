@@ -483,38 +483,6 @@ router.get('/budget', async function(req, res){
     
 })
 
-/*const cheerio = require('cherio')
-   
-    try {
-
-        let idLeads =  await db.asyncConnectDB('dashboard_whitecube',SELECT id FROM dashboard_whitecube.amo_leads)
-        let budgets = [];
-        for (let i = 0; i < idLeads.length; i++) {
-            const lead = idLeads[i];
-            let result = await axios.get(`https://whitecube2.amocrm.ru/leads/detail/${lead.id}`,{//https://whitecube2.amocrm.ru/api/v2/leads
-                headers:{
-                    Cookie: req.headers.cookie
-                }
-            });
-            let $ = cheerio.load(result.data);
-            let budget = $('#lead_card_budget').val();
-            console.log(i, budget);
-            budgets.push({ id: lead.id, budget });
-        }
-            
-        const fs = require('fs');
-
-        fs.appendFile(logs/budget.txt, JSON.stringify(budgets), (err) => {
-            if (err) throw err;
-            console.log('Saved!');
-        });
-        //console.log(result.data);
-        //res.status(200).send(budgets);
-
-    } catch (e) {
-       console.log("e")
-    }*/
-
 router.post('/pipeline', async function(req, res){
 	try{
 		var axi = await axios('https://azim.amocrm.ru/api/v2/account?with=pipelines', {

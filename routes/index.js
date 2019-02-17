@@ -13,9 +13,6 @@ router.post('/api/:table', async function(req, res){
 	var id = req.body;
 	try{
 		var select = await query.select({table: table, where: {id: id.id}});
-		var select_count = await con.query(`select count(id) from ${table}`)
-
-		console.log(select_count)
 		res.send(select);
 	} catch(err){
 		console.log(err);

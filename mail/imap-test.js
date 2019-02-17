@@ -12,7 +12,7 @@ var config = {
         authTimeout: 3000
     }
 };
-imaps.connect(config).then(function (connection) {
+/*imaps.connect(config).then(function (connection) {
  
     return connection.openBox('INBOX').then(function () {
         var delay = 24 * 3600 * 1000;
@@ -23,7 +23,7 @@ imaps.connect(config).then(function (connection) {
         
  
         var fetchOptions = {
-            bodies: ['HEADER', 'TEXT'],
+            bodies: ['HEADER.FIELDS(from to subject date)', 'TEXT'],
             markSeen: false
         };
  
@@ -33,25 +33,19 @@ imaps.connect(config).then(function (connection) {
                     return part.which === 'HEADER';
                 })[0].body.subject[0];
             });
- 
-            console.log(subjects);
+            
+            console.log(subjects[1]);
             // =>
             //   [ 'Hey Chad, long time no see!',
             //     'Your amazon.com monthly statement',
             //     'Hacker Newsletter Issue #445' ]
         });
     });
-});
+});*/
 
-/*imaps.connect(config).then( function (connection) {
+imaps.connect(config).then( function (connection) {
  
     connection.openBox('INBOX').then(function () {
- 
-        // Fetch emails from the last 24h
-        var delay = 24 * 3600 * 1000;
-        var yesterday = new Date();
-        yesterday.setTime(Date.now() - delay);
-        yesterday = yesterday.toISOString();
         var searchCriteria = ['ALL'];
         var fetchOptions = { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true };
  
@@ -91,5 +85,5 @@ imaps.connect(config).then(function (connection) {
         //    [ { filename: 'cats.jpg', data: Buffer() },
         //      { filename: 'pay-stub.pdf', data: Buffer() } ]
     });
-})*/
+})
 //sniwsaohmkncqdic
