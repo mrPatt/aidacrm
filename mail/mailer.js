@@ -109,7 +109,6 @@ function apos(a){
 }
 
 router.post('/inbox', async function(req, res){
-	var insert = {}
 	var mail_id = req.body.id;
 	try{
 		var select = await query.select({table: 'mail', where: {id: mail_id}})
@@ -137,7 +136,7 @@ router.post('/inbox', async function(req, res){
             	console.error(err);
             	return;
         	}
-        	imap.search(['ALL'], async function(err, results) {
+        	imap.search(['UNSEEN'], async function(err, results) {
             	if(!results || !results.length){console.log("No unread mails");
             	imap.end();
             	return;
@@ -152,52 +151,54 @@ router.post('/inbox', async function(req, res){
                 console.log("Done fetching all unseen messages.");
                 imap.end();
             });
+
         });
     });
 }
-
-
+			async function magicFunction(parser, uid){
+				
+				parser.on("headers", async function(headers) {
+					var subj = apos(headers.get('subject'));
+					var froms = headers.get('from').value[0].address;
+					var tos = headers.get('to').value[0].address;
+					var name  = headers.get('from').value[0].name;
+					var date = headers.get('date');
+					try{
+						let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name,uid: uid}
+						console.log(iData)			
+						var insert = await query.insert({table: 'messages', data: iData})	
+	  					ins = insert.insertId;
+						var data = await parser.on('data', async function(data) {
+							if (data.type === 'text'){
+		    					var iData1 = {text: apos(data.text), message_id: ins}
+		    					var insert1 = await query.insert({table: 'messages_text', data: iData1})	     					
+							}
+							return data
+						});
+					}catch(err){
+						console.log(err)
+					};	
+				});
+			}
 			async function processMessage(msg, seqno) {
-    			console.log("Processing msg #" + seqno);
-
+    			// console.log("Processing msg #" + seqno);
     			var parser = new MailParser();
-    			parser.on("headers", async function(headers) {
-        			console.log("Header: ", headers.get('subject'));
-        			var subj = apos(headers.get('subject'));
-        			console.log("From: ", headers.get('from').value[0]);
-        			console.log("To: " , headers.get('to').value[0].address);
-        			console.log("Date: ", headers.get('date'));
-        			var date = headers.get('date');
-        			var iData = {mail_id: mail_id, froms: headers.get('from').value[0].address, tos: headers.get('to').value[0].address, 
-        						subject: subj, date: date, seqno: seqno, name: headers.get('from').value[0].name}
-        			insert = 	await query.insert({table: 'messages', data: iData})
-        			console.log('111111111111111111111111', insert);
-
-    			});
-    			ins = insert;
-    			parser.on('data', async function(data) {
-        			if (data.type === 'text') {
-            			console.log(seqno);
-            			//console.log(data.text);  /* data.html*/
-        			}
-
-        				var iData = {text: apos(data.text), message_id: ins.insertId}
-        				var insert = await query.insert({table: 'messages_text', data: iData})
-        				console.log('2222222222222222222222' ,insert)
-     			});
-
+    			let ins = '';
     			msg.on("body", async function(stream) {
         			stream.on("data", async function(chunk) {
+
             			parser.write(chunk.toString("utf8"));
         			});
     			});
-    			msg.on('attributes', function(attrs) {
-  					console.log('uid = ' + attrs.uid);
+    			msg.on('attributes', async function(attrs) {
+  					let uid = attrs.uid;
+  					await magicFunction(parser, attrs.uid);
+  					
 				});
-    			msg.once("end",async function() {
-        			await console.log("Finished msg #" + seqno);
-        		parser.end();
-    		});
+				msg.once("end",async function() {
+        			
+        			parser.end();
+    			});
 		}
 	}
 
@@ -233,19 +234,19 @@ router.post('/attachments', async function(req, res){
         			authTimeout: 3000
 				}
 			};
-			imaps.connect(config).then( function (connection) {
+			imaps.connect(config).then(async function (connection) {
  				connection.openBox('INBOX').then(function () {
-        			var searchCriteria = ['ALL'];
+        			var searchCriteria = ['UNSEEN'];
         			var fetchOptions = { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true };
         			return connection.search(searchCriteria, fetchOptions);
-    			}).then(function (messages) {
+    			}).then(async function (messages) {
  					
         			var attachments = [];
-        			messages.forEach( function (message, seqno) {
+        			messages.forEach(async function (message, seqno) {
         		    	var parts = imaps.getParts(message.attributes.struct);
             			attachments = attachments.concat(parts.filter( function (part) {
                 		return part.disposition && part.disposition.type.toUpperCase() === 'ATTACHMENT';
-                	}).map( function (part) {
+                	}).map(async function (part) {
                 	return connection.getPartData(message, part).then(async function (partData) {
                     	let name = part.disposition.params.filename.split('.');
                     	name[name.length - 2] += new Date().valueOf();
@@ -266,9 +267,10 @@ router.post('/attachments', async function(req, res){
                     	var normalPath = path.normalize(__dirname + '/../attachments/');
                     	console.log(normalPath)
                     	fs.writeFileSync(normalPath + name, partData);
+                    	var uid = message.attributes.uid;
 						var insert = 	await con.query(`INSERT INTO amocrm.mail_attachments 
-														(mail_id, att_name, seqno, path) VALUES (?, ?, ?, ?)`, 
-														[id, name, seqno, normalPath]);
+														(mail_id, att_name, uid, path) VALUES (?, ?, ?, ?)`, 
+														[id, name, uid, normalPath]);
 						console.log(insert)
                     	return {
                     		path: normalPath,
@@ -293,30 +295,6 @@ router.post('/attachments', async function(req, res){
 		res.send()
 	} catch(e){
 		res.send(e)
-	}
-})
-
-router.post('/test', async function(req, res){
-	try{
-		var config = {
-    		imap: {
-    	    user: 'sptest147@mail.ru',
-    	    password: 'gjyxbr147',
-    	    host: 'imap.mail.ru',
-    	    port: 993,
-    	    tls: true,
-        	authTimeout: 3000
-    	}
-	};
-	var imap = await imaps.connect(config);
-	await imap.openBox('INBOX');
-	var search = await imap.search(['ALL'], {bodies: ['TEXT'], markSeen: false});
-	search.map(function(results){
-		console.log(results[0].parts.body.subject[0])
-
-	})
-	}catch(e){
-		console.log(e);
 	}
 })
 
