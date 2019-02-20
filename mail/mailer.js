@@ -162,19 +162,26 @@ router.post('/inbox', async function(req, res){
 					var froms = headers.get('from').value[0].address;
 					var tos = headers.get('to').value[0].address;
 					var name  = headers.get('from').value[0].name;
-					var date = headers.get('date');
+					var date = new Date(headers.get('date')).valueOf();
 					try{
-						let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name,uid: uid}
-						console.log(iData)			
-						var insert = await query.insert({table: 'messages', data: iData})	
-	  					ins = insert.insertId;
-						var data = await parser.on('data', async function(data) {
-							if (data.type === 'text'){
-		    					var iData1 = {text: apos(data.text), message_id: ins}
-		    					var insert1 = await query.insert({table: 'messages_text', data: iData1})	     					
-							}
-							return data
-						});
+						console.log('date', date)
+						var select = await query.select({table: 'messages', where: {date: date}});
+						console.log('Suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuula', select)
+						if(select.length == 0){
+							let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name, uid: uid}
+							console.log(iData)			 
+							var insert = await query.insert({table: 'messages', data: iData})	
+		  					ins = insert.insertId;
+							var data = await parser.on('data', async function(data) {
+								if (data.type === 'text'){
+			    					var iData1 = {text: apos(data.text), message_id: ins}
+			    					var insert1 = await query.insert({table: 'messages_text', data: iData1})	     					
+								}
+								return data
+							});		
+						}else{
+							select = select[0];
+						}
 					}catch(err){
 						console.log(err)
 					};	
@@ -183,7 +190,6 @@ router.post('/inbox', async function(req, res){
 			async function processMessage(msg, seqno) {
     			// console.log("Processing msg #" + seqno);
     			var parser = new MailParser();
-    			let ins = '';
     			msg.on("body", async function(stream) {
         			stream.on("data", async function(chunk) {
 
@@ -199,10 +205,9 @@ router.post('/inbox', async function(req, res){
         			
         			parser.end();
     			});
+			}
 		}
-	}
-
-		res.send();
+		res.send()
 	} catch(e){
 		console.log(e); 
 	}
