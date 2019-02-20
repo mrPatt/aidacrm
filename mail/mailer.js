@@ -29,17 +29,17 @@ router.post('/add', async function(req, res){
 });
 
 router.post('/send', async function(req, res){
-	var id = req.body.id;
+	var mail_id = req.body.id;
 	console.log(req.body)
 	try{
 		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
 				if(err){
 					res.status(401).send('Unauthorized user');
 				} else {
-					data.user_id = decoded.id;
+					data.user_id = decoded.mail_id;
 				}
 			});*/
-		var select = await query.select({table: 'mail', where: {id: id}})
+		var select = await query.select({table: 'mail', where: {id: mail_id}})
 		console.log(select)
 		for(var a=0; a<select.length; a++){
 
@@ -108,9 +108,133 @@ function apos(a){
 	}
 }
 
+router.post('/refresh', async function(req, res){
+	var mail_id = req.body.id;
+	try{
+		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
+				if(err){
+					res.status(401).send('Unauthorized user');
+				} else {
+					data.user_id = decoded.mail_id;
+				}
+			});*/
+		var select = await query.select({table: 'mail', where: {id: mail_id}})
+		console.log(select)
+		for (var a = 0; a < select.length; a++) {
+
+		var imap = new Imap({
+			user: select[a].email,
+       		password: select[a].password,
+       		host: select[a].imap_host,
+       		port: select[a].imap_port,      	
+       		tls: true,
+   			authTimeout: 3000		
+		});
+
+		imap.once("ready", execute);
+		imap.once("error", async function(err) {
+    		log.error("Connection error: " + err.stack);
+		});
+		imap.connect();
+			var delay = 900 * 1000;
+	        var mins = new Date();
+	       	mins.setTime(Date.now() - delay);
+	        mins = new Date(mins).toString(); 
+	        console.log('---------------------------', mins)
+			function execute() {
+    		imap.openBox("INBOX", false, async function(err, mailBox) {
+        	if (err) {
+            	console.error(err);
+            	return;
+        	}
+        	imap.search(['UNSEEN', ['SINCE', mins] ], async function(err, results) {
+            	if(!results || !results.length){console.log("No unread mails");
+            	imap.end();
+            	return;
+            }
+           
+            var f = imap.fetch(results, { bodies: "" });
+            f.on("message", processMessage);
+            f.once("error", function(err) {
+                return Promise.reject(err);
+            });
+            f.once("end",async function() {
+                console.log("Done fetching all unseen messages.");
+                imap.end();
+            });
+
+        });
+    });
+}
+			async function magicFunction(parser, uid){
+				
+				parser.on("headers", async function(headers) {
+					var subj = apos(headers.get('subject'));
+					var froms = headers.get('from').value[0].address;
+					var tos = headers.get('to').value[0].address;
+					var name  = headers.get('from').value[0].name;
+					console.log('______________', headers.get('date').toString())
+					var date = new Date(headers.get('date')).valueOf();
+					try{
+						var select = await query.select({table: 'messages', where: {date: date}});
+						if(select.length == 0){
+							let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name, uid: uid}
+							console.log(iData)			 
+							var insert = await query.insert({table: 'messages', data: iData})	
+		  					ins = insert.insertId;
+							var data = await parser.on('data', async function(data) {
+								if (data.type === 'text'){
+			    					var iData1 = {text: apos(data.text), message_id: ins}
+			    					var insert1 = await query.insert({table: 'messages_text', data: iData1})	     					
+								}
+								return data
+							});		
+						}else{
+							select = select[0];
+							//console.log(select)
+						}
+					}catch(err){
+						console.log(err)
+					};	
+				});
+			}
+			async function processMessage(msg, seqno) {
+    			// console.log("Processing msg #" + seqno);
+    			var parser = new MailParser();
+    			msg.on("body", async function(stream) {
+        			stream.on("data", async function(chunk) {
+
+            			parser.write(chunk.toString("utf8"));
+        			});
+    			});
+    			msg.on('attributes', async function(attrs) {
+  					let uid = attrs.uid;
+  					await magicFunction(parser, attrs.uid);
+  					
+				});
+				msg.once("end",async function() {
+        			parser.end();
+    			});
+			}
+		}
+		res.send()
+	} catch(e){
+		console.log(e); 
+	}
+
+
+});
+
 router.post('/inbox', async function(req, res){
 	var mail_id = req.body.id;
 	try{
+		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
+				if(err){
+					res.status(401).send('Unauthorized user');
+				} else {
+					data.user_id = decoded.mail_id;
+				}
+			});*/
 		var select = await query.select({table: 'mail', where: {id: mail_id}})
 		console.log(select)
 		for (var a = 0; a < select.length; a++) {
@@ -166,7 +290,6 @@ router.post('/inbox', async function(req, res){
 					try{
 						console.log('date', date)
 						var select = await query.select({table: 'messages', where: {date: date}});
-						console.log('Suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuula', select)
 						if(select.length == 0){
 							let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name, uid: uid}
 							console.log(iData)			 
@@ -202,7 +325,6 @@ router.post('/inbox', async function(req, res){
   					
 				});
 				msg.once("end",async function() {
-        			
         			parser.end();
     			});
 			}
@@ -217,16 +339,16 @@ router.post('/inbox', async function(req, res){
 
 
 router.post('/attachments', async function(req, res){
-	var id = req.body.id;
+	var mail_id = req.body.id;
 	try{
 		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
 				if(err){
 					res.status(401).send('Unauthorized user');
 				} else {
-					data.user_id = decoded.id;
+					data.user_id = decoded.mail_id;
 				}
 			});*/
-		var select = await query.select({table: 'mail', where: {id: id}})
+		var select = await query.select({table: 'mail', where: {id: mail_id}})
 		console.log(select)
 		for(var a=0; a<select.length; a++){
 			var config = {
@@ -290,9 +412,6 @@ router.post('/attachments', async function(req, res){
         	return Promise.all(attachments);
     	}).then(function (attachments) {
         	console.log(attachments);
-        // =>
-        //    [ { filename: 'cats.jpg', data: Buffer() },
-        //      { filename: 'pay-stub.pdf', data: Buffer() } ]
    		});
 	})
 		
