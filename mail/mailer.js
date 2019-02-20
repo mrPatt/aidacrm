@@ -287,6 +287,10 @@ router.post('/inbox', async function(req, res){
 					var tos = headers.get('to').value[0].address;
 					var name  = headers.get('from').value[0].name;
 					var date = new Date(headers.get('date')).valueOf();
+					let s = ''
+					for (var i = 0; i < subj.length; i++)
+						if(subj[i].keyCode) s += subj[i]
+					subj = s;
 					try{
 						console.log('date', date)
 						var select = await query.select({table: 'messages', where: {date: date}});
