@@ -12,7 +12,7 @@ var mysql = require('mysql');
 var express = require('express');
 var Query = require('node-mysql-ejq');
 var config = require('../config/config');
-var con = mysql.createConnection(config.db, {charset: 'utf8mb4'});
+var con = mysql.createConnection(config.db);
 
 var query = new Query(con);
 
