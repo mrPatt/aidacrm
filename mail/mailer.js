@@ -1,5 +1,5 @@
 var nodemailer = require('nodemailer');
-var iconv = require('iconv-lite')
+var iconv = require('iconv')
 var MailParser = require('mailparser').MailParser;
 var bcrypt = require('bcrypt-nodejs');
 var imaps = require('imap-simple');
@@ -12,7 +12,7 @@ var mysql = require('mysql');
 var express = require('express');
 var Query = require('node-mysql-ejq');
 var config = require('../config/config');
-var con = mysql.createConnection(config.db, {charset: 'utf8_general_ci'});
+var con = mysql.createConnection(config.db, {charset: 'utf8mb4'});
 
 var query = new Query(con);
 
@@ -109,6 +109,13 @@ function apos(a){
 	}
 }
 
+function toUTF8(body) {
+  // convert from iso-8859-1 to utf-8
+  var ic = new iconv.Iconv('iso-8859-1', 'utf-8');
+  var buf = ic.convert(body);
+  return buf.toString('utf-8');
+}
+
 router.post('/refresh', async function(req, res){
 	var mail_id = req.body.id;
 	try{
@@ -170,8 +177,7 @@ router.post('/refresh', async function(req, res){
 			async function magicFunction(parser, uid){
 				
 				parser.on("headers", async function(headers) {
-					var subj = iconv.decode(apos(headers.get('subject')));
-					console.log('___________',subj)
+					var subj = apos(headers.get('subject'));
 					var froms = headers.get('from').value[0].address;
 					var tos = headers.get('to').value[0].address;
 					var name  = headers.get('from').value[0].name;
@@ -283,10 +289,7 @@ router.post('/inbox', async function(req, res){
 			async function magicFunction(parser, uid){
 				
 				parser.on("headers", async function(headers) {
-					var subj = new Buffer(apos(headers.get('subject')));
-					let s = iconv.decode(Buffer.from(subj), 'utf8')
-					subj = s;
-					console.log(s)
+					var subj = apos(headers.get('subject'));
 					var froms = headers.get('from').value[0].address;
 					var tos = headers.get('to').value[0].address;
 					var name  = headers.get('from').value[0].name;

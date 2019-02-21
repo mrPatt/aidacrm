@@ -16,6 +16,7 @@
     "express": "~4.16.0",
     "http-errors": "~1.6.2",
     "https": "^1.0.0",
+    "iconv": "^2.3.2",
     "iconv-lite": "^0.4.24",
     "imap": "^0.8.19",
     "imap-simple": "^4.3.0",
