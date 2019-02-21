@@ -1,4 +1,5 @@
 var nodemailer = require('nodemailer');
+var iconv = require('iconv-lite')
 var MailParser = require('mailparser').MailParser;
 var bcrypt = require('bcrypt-nodejs');
 var imaps = require('imap-simple');
@@ -11,7 +12,7 @@ var mysql = require('mysql');
 var express = require('express');
 var Query = require('node-mysql-ejq');
 var config = require('../config/config');
-var con = mysql.createConnection(config.db);
+var con = mysql.createConnection(config.db, {charset: 'utf8_general_ci'});
 
 var query = new Query(con);
 
@@ -169,11 +170,11 @@ router.post('/refresh', async function(req, res){
 			async function magicFunction(parser, uid){
 				
 				parser.on("headers", async function(headers) {
-					var subj = apos(headers.get('subject'));
+					var subj = iconv.decode(apos(headers.get('subject')));
+					console.log('___________',subj)
 					var froms = headers.get('from').value[0].address;
 					var tos = headers.get('to').value[0].address;
 					var name  = headers.get('from').value[0].name;
-					console.log('______________', headers.get('date').toString())
 					var date = new Date(headers.get('date')).valueOf();
 					try{
 						var select = await query.select({table: 'messages', where: {date: date}});
@@ -282,15 +283,14 @@ router.post('/inbox', async function(req, res){
 			async function magicFunction(parser, uid){
 				
 				parser.on("headers", async function(headers) {
-					var subj = apos(headers.get('subject'));
+					var subj = new Buffer(apos(headers.get('subject')));
+					let s = iconv.decode(Buffer.from(subj), 'utf8')
+					subj = s;
+					console.log(s)
 					var froms = headers.get('from').value[0].address;
 					var tos = headers.get('to').value[0].address;
 					var name  = headers.get('from').value[0].name;
 					var date = new Date(headers.get('date')).valueOf();
-					let s = ''
-					for (var i = 0; i < subj.length; i++)
-						if(subj[i].keyCode) s += subj[i]
-					subj = s;
 					try{
 						console.log('date', date)
 						var select = await query.select({table: 'messages', where: {date: date}});
@@ -401,7 +401,7 @@ router.post('/attachments', async function(req, res){
                     	var uid = message.attributes.uid;
 						var insert = 	await con.query(`INSERT INTO amocrm.mail_attachments 
 														(mail_id, att_name, uid, path) VALUES (?, ?, ?, ?)`, 
-														[id, name, uid, normalPath]);
+														[mail_id, name, uid, normalPath]);
 						console.log(insert)
                     	return {
                     		path: normalPath,
