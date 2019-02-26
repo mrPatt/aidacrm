@@ -8,11 +8,22 @@ var query = new Query(con);
 
 var router = express.Router();
 
-router.post('/api/:table', async function(req, res){
-	var table = req.params.table;
-	var id = req.body;
+router.post('/api/select', async function(req, res){
+	var p_id = req.body.p_id;
+	var s_id = req.body.s_id;
 	try{
-		var select = await query.select({table: table, where: {id: id.id}});
+		console.log(p_id, s_id)
+		var select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
+										L.main_contact_id main_contact, L.leads_company_id leads_company,
+										C.id main_contact_id, C.name contact_name,
+										LC.id leads_company_id, LC.name company_name, 
+										P.id pipeline_id, P.name pipeline_name, P.pos pipeline_position,
+										S.id step_id, S.name step_name, S.position step_position
+									FROM leads L
+									LEFT JOIN contacts C ON L.main_contact_id = C.id
+									LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
+									LEFT JOIN pipelines P ON L.pipeline_id = P.id
+									LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} ORDER BY L.created_at DESC`)
 		res.send(select);
 	} catch(err){
 		console.log(err);
@@ -43,10 +54,11 @@ router.post('/api/new/:table', async function(req, res){
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
 	var like = req.body.like;
+	var sql = '';
 	try{
 		let sql = `SELECT * FROM ${table} WHERE `;
 		var count = false;
-		var pre_select = await query.select({table: table, where: {id: 1}});
+		var pre_select = await query.select({table: table, limit: {from: 0, number: 1}});
 		pre_select = pre_select[0];
 		for(var key in pre_select){
 			if(key !='created_at' || key !='updated_at' || key !='complete_till'){
@@ -85,7 +97,8 @@ router.post('/api/where/:table/:from', async function(req, res){
 		}	
 		res.send(select);
 	} catch(e){
-		res.status(500).send(e);
+		console.log(e)
+		res.send(e);
 	}
 });
 
@@ -152,7 +165,8 @@ router.post('/api/pos/:table/:id', async function(req, res){
 
 router.post('/api/test', async function(req, res){
 	try{
-		var select = await query.select({table: 'leads', where: {id: {less: 1000, more: 500}}});
+
+		var select = await query.select({table: 'leads'});
 		console.log(select)
 		res.send();
 	} catch(e){
