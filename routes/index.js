@@ -12,8 +12,8 @@ router.post('/api/select', async function(req, res){
 	var p_id = req.body.p_id;
 	var s_id = req.body.s_id;
 	try{
-		console.log(p_id, s_id)
-		var select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
+		if(!s_id){
+			var select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
 										L.main_contact_id main_contact, L.leads_company_id leads_company,
 										C.id main_contact_id, C.name contact_name,
 										LC.id leads_company_id, LC.name company_name, 
@@ -23,7 +23,22 @@ router.post('/api/select', async function(req, res){
 									LEFT JOIN contacts C ON L.main_contact_id = C.id
 									LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
 									LEFT JOIN pipelines P ON L.pipeline_id = P.id
-									LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} ORDER BY L.created_at DESC`)
+									LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id}
+									ORDER BY L.created_at DESC LIMIT 20`)
+		}else{
+			var select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
+										L.main_contact_id main_contact, L.leads_company_id leads_company,
+										C.id main_contact_id, C.name contact_name,
+										LC.id leads_company_id, LC.name company_name, 
+										P.id pipeline_id, P.name pipeline_name, P.pos pipeline_position,
+										S.id step_id, S.name step_name, S.position step_position
+									FROM leads L
+									LEFT JOIN contacts C ON L.main_contact_id = C.id
+									LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
+									LEFT JOIN pipelines P ON L.pipeline_id = P.id
+									LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} 
+									ORDER BY L.created_at DESC LIMIT 20`)
+		}
 		res.send(select);
 	} catch(err){
 		console.log(err);
