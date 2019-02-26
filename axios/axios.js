@@ -105,8 +105,13 @@ router.post('/contacts', async function(req, res){
 						console.log(iData)
 						var insertContact = await query.insert({table: 'contacts', data: iData});
 					} else {
+						var iData = {name: apos(data[i].name), created_at: new Date(data[i].created_at*1000),
+								updated_at: new Date(data[i].updated_at*1000),
+								created_by: insertUser.insertId, amo_id: data[i].id, resp_user_id: insertResp.insertId,
+								group_id: selectGroup[0].id};
 						selectContact = selectContact[0]
 						var insertContact = {insertId: selectContact.id}
+						var updateContact = await query.update({table: 'contacts', where: {amo_id: data[i].id}, data: iData})
 					}
 
 					for(var j=0; j<data[i].custom_fields.length; j++){
@@ -129,8 +134,11 @@ router.post('/contacts', async function(req, res){
 								var insertCV = await query.insert({table: 'contacts_value', data: iCV});
 								console.log(iCV);			
 							} else {
+								var iCV =	{value: data[i].custom_fields[j].values[k].value, field_id: insertCF.insertId, 
+											contact_id: insertContact.insertId};
 								selectCV = selectCV[0];
 								var insertCV = {insertId: selectCV.id};
+								var updateCV = await query.update({table: 'contacts_value', where: {id: insertCV.insertId}, data: iCV})
 							}
 							
 							
@@ -217,8 +225,13 @@ router.post('/company', async function(req, res){
 					var insertCompany = await query.insert({table: 'leads_company', data: iData});
 					console.log(iData)
 				} else {
+					var iData = {name: apos(data[i].name), created_at: new Date(data[i].created_at*1000), 
+						updated_at: new Date(data[i].updated_at*1000),
+						created_by: insertUser.insertId, amo_id: data[i].id, resp_user_id: insertResp.insertId,
+						group_id: selectGroup[0].id};
 					selectCompany = selectCompany[0]
 					var insertCompany = {insertId: selectCompany.id}
+					var updateCompany = await query.update({table: 'leads_company', where: {amo_id: data[i].id}, data: iData})
 				}
 					if(data[i].contacts.id)
 					for (var j = 0; j < data[i].contacts.id.length; j++) {
@@ -255,6 +268,11 @@ router.post('/company', async function(req, res){
 								} else {
 									selectCV = selectCV[0];
 									var insertCV = {insertId: selectCV.id}
+									var iCV =	{value: data[i].custom_fields[j].values[k].value, field_id: insertCF.insertId, 
+											contact_id: insertContact.insertId};
+									selectCV = selectCV[0];
+									var insertCV = {insertId: selectCV.id};
+									var updateCV = await query.update({table: 'contacts_value', where: {id: insertCV.insertId}, data: iCV})
 								}
 							}
 						}
@@ -335,7 +353,6 @@ router.post('/leads', async function(req, res){
 						if(selectMC.length == 0){
 							var iMC = {name: 'loh_contact', amo_id: data[i].main_contact.id};
 							var insertMC = await query.insert({table: 'contacts', data: iMC});
-							console.log('===================================', iMC)
 						} else {
 							selectMC = selectMC[0]
 							var insertMC = {insertId: selectMC.id}
@@ -350,7 +367,6 @@ router.post('/leads', async function(req, res){
 					if(selectLC.length == 0){
 						var iLC = {name: 'loh_company', amo_id: data[i].company.id};
 						var insertLC = await query.insert({table: 'leads_company', data: iLC});
-						console.log('=====================================',iLC)
 					} else {
 						selectLC = selectLC[0]
 						var insertLC = {insertId: selectLC.id};
@@ -372,8 +388,15 @@ router.post('/leads', async function(req, res){
 					var insertLeads = await query.insert({table: 'leads', data: iData});
 					console.log(iData)
 				} else {
+					var iData = {name: apos(data[i].name), created_at: new Date(data[i].created_at*1000),
+								 updated_at: new Date(data[i].updated_at*1000),
+								 closed_at: closed_at, created_by: insertUser.insertId,
+								 resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, amo_id: data[i].id, 
+								 status: selectStep[0].id, pipeline_id: selectPipe[0].id, main_contact_id: insertMC.insertId,
+								 leads_company_id: insertLC.insertId};
 					selectLeads = selectLeads[0];
 					var insertLeads = {insertId: selectLeads.id};
+					var updateLeads = await query.update({table: 'leads', where: {amo_id: data[i].id}, data: iData})
 				}
 				console.log(data[i].contacts.id);
 				if(typeof data[i].contacts.id != 'undefined'){
@@ -563,18 +586,22 @@ router.post('/task', async function(req, res){
 					var insertResp = {insertId: selectResp.id};
 				}
 
-				var iData = {comment: data[i].text, created_at: new Date(data[i].created_at*1000), updated_at: new Date(data[i].updated_at*1000), 
-					complete_till: new Date(data[i].complete_till_at*1000), created_by: insertUser.insertId,
-					amo_id: data[i].id, resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, 
-					is_completed: data[i].is_completed, task_type: insertCF.insertId};
-						//console.log(iData)
+				var selectId = await query.select({table: 'task', where: {amo_id: data[i].id}});
+				if(selectId.length == 0){
+					var iData = {comment: data[i].text, created_at: new Date(data[i].created_at*1000), updated_at: new Date(data[i].updated_at*1000), 
+						complete_till: new Date(data[i].complete_till_at*1000), created_by: insertUser.insertId,
+						amo_id: data[i].id, resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, 
+						is_completed: data[i].is_completed, task_type: insertCF.insertId};
+							//console.log(iData)
 
-						var insertTask = await query.insert({table: 'task', data: iData});
+							var insertTask = await query.insert({table: 'task', data: iData});
 
-						if(typeof data[i].result.id!='undefined'){
-							var iCV = {text: data[i].result.text, amo_id: data[i].result.id, task_id: insertTask.insertId};
-							var insertCV = await query.insert({table: 'task_result', data: iCV});
-						} 
+							if(typeof data[i].result.id!='undefined'){
+								var iCV = {text: data[i].result.text, amo_id: data[i].result.id, task_id: insertTask.insertId};
+								var insertCV = await query.insert({table: 'task_result', data: iCV});
+							} 
+				}
+
 
 						console.log(iCV);
 					}

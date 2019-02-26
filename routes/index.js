@@ -20,16 +20,36 @@ router.post('/api/:table', async function(req, res){
 	}
 });
 
+router.post('/api/new/:table', async function(req, res){
+	var data = req.body;
+	var table = req.params.table;
+	try{
+		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
+				if(err){
+					res.status(401).send('Unauthorized user');
+				} else {
+					data.created_by = decoded.id;
+				}
+			});*/
+		var insert = await query.insert({table: table, data: data});
+		res.send();
+		console.log(insert);
+	} catch(e){
+		console.log(e.message);
+		next(e);
+	}
+})
+
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
 	var like = req.body.like;
 	try{
-		var sql = `SELECT * FROM ${table} WHERE `;
+		let sql = `SELECT * FROM ${table} WHERE `;
 		var count = false;
 		var pre_select = await query.select({table: table, where: {id: 1}});
 		pre_select = pre_select[0];
 		for(var key in pre_select){
-			if(key!='created_at' || key!='updated_at' || key!='complete_till'){
+			if(key !='created_at' || key !='updated_at' || key !='complete_till'){
 				if(!count){
 					sql = sql + `${key} LIKE '%${like}%'`;
 					count = true;
@@ -39,9 +59,11 @@ router.post('/api/like/:table', async function(req, res){
 			}
 		}
 		sql = sql + ' LIMIT 0, 20';
+		console.log('asdasdadsasd', sql)
 		var select = await con.query(sql)
 		res.send(select);
 	} catch(e){
+		console.log(e);
 		res.status(500).send(e);
 	}
 });
@@ -114,6 +136,17 @@ router.post('/api/count/:table', async function(req, res){
 		
 	} catch(e){
 		console.log(e)
+	}
+});
+
+router.post('/api/pos/:table/:id', async function(req, res){
+	var table = req.params.table;
+	var id = req.body.id;
+	try{
+		//for(var key )
+		res.send();
+	}catch(e){
+		console.log(e);
 	}
 })
 
