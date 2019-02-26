@@ -432,9 +432,12 @@ router.post('/leads', async function(req, res){
 									leads_id: insertLeads.insertId};
 								var insertCV = await query.insert({table: 'leads_value', data: iCV});
 									console.log(iCV);
-								} else {
-									selectCV = selectCV[0];
-									var insertCV = {insertId: selectCV.id}
+							} else {
+								var iCV = {value: data[i].custom_fields[j].values[k].value, field_id: insertCF.insertId, 
+									leads_id: insertLeads.insertId};
+								selectCV = selectCV[0];
+								var insertCV = {insertId: selectCV.id}
+								var updateCV = await query.update({table: 'contacts_value', where: {id: insertCV.insertId}, data: iCV})
 								}
 
 							}
