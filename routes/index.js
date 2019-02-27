@@ -8,7 +8,7 @@ var query = new Query(con);
 
 var router = express.Router();
 
-router.post('/api/select', async function(req, res){
+router.get('/api/select', async function(req, res){
 	var p_id = req.body.p_id;
 	var s_id = req.body.s_id;
 	try{
@@ -48,7 +48,7 @@ router.post('/api/select', async function(req, res){
 	}
 });
 
-router.post('/api/select/pipeline', async function(req, res){
+router.get('/api/select/pipeline', async function(req, res){
 	try{
 		var select = await con.query(`SELECT id, name FROM pipelines`);
 		res.send(select)
