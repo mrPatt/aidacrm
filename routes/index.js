@@ -24,7 +24,7 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
 										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id}
-										ORDER BY L.created_at DESC`)
+										ORDER BY L.created_at DESC LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id}`)
 		}else{
@@ -42,8 +42,8 @@ router.post('/api/select', async function(req, res){
 										ORDER BY L.created_at DESC LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
+			
 		}
-		
 		selCount = selCount[0].count;
 		selSumm = selSumm[0].sumBudget;
 		res.status(200).json({select, selCount, selSumm});
