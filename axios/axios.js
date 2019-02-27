@@ -565,6 +565,19 @@ router.post('/task', async function(req, res){
 					var insertUser = {insertId: selectUser.id};
 				}
 
+				for(var j=0; j<data.length; j++){
+					var selectCF = await query.select({table: 'task_type', where: {type_id: data[i].task_type}});
+					if(selectCF.length==0){
+						var iCF = {type_id: data[i].task_type}
+						var insertCF = await query.insert({table: 'task_type', data: iCF});
+						console.log(iCF);
+					} else {
+						selectCF = selectCF[0];
+						var insertCF = {insertId: selectCF.id};
+					}
+
+				}
+
 				var selectGroup = await query.select({table: 'users_group', where: {amo_id: `${data[i].group_id}`}});
 
 				var selectResp = await query.select({table: 'users', where: {amo_id: `${data[i].responsible_user_id}`}});
@@ -581,7 +594,7 @@ router.post('/task', async function(req, res){
 					var iData = {comment: data[i].text, created_at: new Date(data[i].created_at*1000), updated_at: new Date(data[i].updated_at*1000), 
 						complete_till: new Date(data[i].complete_till_at*1000), created_by: insertUser.insertId,
 						amo_id: data[i].id, resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, 
-						is_completed: data[i].is_completed, task_type: insertCF.insertId, element_type: data[i].element_type,
+						is_completed: data[i].is_completed, task_type: insertCF.insertId, element_type: insertCF.insertId, 
 						element_id: data[i].element_id};
 							//console.log(iData)
 

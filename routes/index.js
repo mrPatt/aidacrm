@@ -74,6 +74,17 @@ router.post('/api/select/step', async function(req, res){
 	}
 })
 
+router.put('/api/update/step', async function(req, res){
+	var id = req.body.lead_id;
+	var s_id = req.body.s_id;
+	try{
+		var update = await con.query(`UPDATE leads SET status = ${s_id} WHERE id = ${id}`)
+		res.send(update);
+	}catch(e){
+		res.status(500).send(e);
+	}
+})
+
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
 	var like = req.body.like;
@@ -125,7 +136,7 @@ router.post('/api/where/:table/:from', async function(req, res){
 	}
 });
 
-router.post('/api/update/:table', async function(req, res){
+router.post('/api/updat/:table', async function(req, res){
 	var table = req.params.table;
 	var data = req.body;
 	for(var key in data){

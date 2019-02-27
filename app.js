@@ -8,7 +8,6 @@ global.config = require('./config/config');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var regRouter = require('./controller/registration');
-var lead = require('./routes/lead');
 var axios = require('./axios/axios');
 var mail = require('./mail/mailer');
 var excel = require('./controller/excel');
@@ -36,7 +35,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/leads', lead);
 app.use('/axios', axios);
 app.use('/mail', mail);
 app.use('/excel', excel);
