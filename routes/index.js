@@ -32,6 +32,7 @@ router.post('/api/select', async function(req, res){
 										LC.id leads_company_id, LC.name company_name, 
 										P.id pipeline_id, P.name pipeline_name, P.pos pipeline_position,
 										S.id step_id, S.name step_name, S.position step_position
+									COUNT(*) AS 
 									FROM leads L
 									LEFT JOIN contacts C ON L.main_contact_id = C.id
 									LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
@@ -39,30 +40,21 @@ router.post('/api/select', async function(req, res){
 									LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} 
 									ORDER BY L.created_at DESC LIMIT 20`)
 		}
-		res.send(select);
+		var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
+		res.status(200).send(selCount);
 	} catch(err){
 		console.log(err);
 		res.status(500).send();
 	}
 });
 
-router.post('/api/new/:table', async function(req, res){
-	var data = req.body;
-	var table = req.params.table;
+router.post('/api/select/pipeline', async function(req, res){
 	try{
-		/*await jwt.verify(req.cookies.token, config.jwtSecret, function(err, decoded){
-				if(err){
-					res.status(401).send('Unauthorized user');
-				} else {
-					data.created_by = decoded.id;
-				}
-			});*/
-		var insert = await query.insert({table: table, data: data});
-		res.send();
-		console.log(insert);
-	} catch(e){
-		console.log(e.message);
-		next(e);
+		var select = await con.query(`SELECT id, name FROM pipelines`);
+		res.send(select)
+	}catch(e){
+		console.log(e);
+		res.status(500).send();
 	}
 })
 
