@@ -9,11 +9,11 @@ var query = new Query(con);
 var router = express.Router();
 
 router.post('/api/select', async function(req, res){
-	let p_id = req.body.p_id;
-	let s_id = req.body.s_id;
+	var p_id = req.body.p_id;
+	var s_id = req.body.s_id;
 	try{
 		if(!s_id){
-			let select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
+			var select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
 										L.main_contact_id main_contact, L.leads_company_id leads_company,
 										C.id main_contact_id, C.name contact_name,
 										LC.id leads_company_id, LC.name company_name, 
@@ -25,10 +25,10 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
 										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id}
 										ORDER BY L.created_at DESC`)
-			let selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id}`)
-			let selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id}`)
+			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id}`)
+			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id}`)
 		}else{
-			let select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
+			var select = await con.query(`SELECT L.id leads_id, L.name leads_name, L.budget, L.created_at leads_created_at, 
 										L.main_contact_id main_contact, L.leads_company_id leads_company,
 										C.id main_contact_id, C.name contact_name,
 										LC.id leads_company_id, LC.name company_name, 
@@ -40,8 +40,8 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
 										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} 
 										ORDER BY L.created_at DESC LIMIT 20`)
-			let selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
-			let selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
+			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
+			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
 		}
 		
 		selCount = selCount[0].count;
@@ -55,7 +55,7 @@ router.post('/api/select', async function(req, res){
 
 router.get('/api/select/pipeline', async function(req, res){
 	try{
-		let select = await con.query(`SELECT id, name FROM pipelines`);
+		var select = await con.query(`SELECT id, name FROM pipelines ORDER BY pos`);
 		res.send(select)
 	}catch(e){
 		console.log(e);
@@ -64,9 +64,9 @@ router.get('/api/select/pipeline', async function(req, res){
 });
 
 router.post('/api/select/step', async function(req, res){
-	let p_id = req.body.p_id;
+	var p_id = req.body.p_id;
 	try{
-		let select = await con.query(`SELECT id, name FROM step WHERE pipeline_id = ${p_id}`)
+		var select = await con.query(`SELECT id, name FROM step WHERE pipeline_id = ${p_id}`)
 		res.send(select);
 	}catch(e){
 		console.log(e);
