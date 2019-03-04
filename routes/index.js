@@ -72,17 +72,21 @@ router.post('/api/select/step', async function(req, res){
 		console.log(e);
 		res.status(500).send(e);
 	}
-})
+});
 
 router.get('/api/select/pipe_step', async function(req, res){
 	try{
 		var select = await con.query(`SELECT p.id, p.name, JSON_ARRAYAGG(JSON_OBJECT('id',s.id,'name',s.name,'company_id',s.company_id)) steps 
-									FROM pipelines p LEFT JOIN step s ON s.pipeline_id=p.id GROUP BY p.id`)
+									FROM pipelines p LEFT JOIN step s ON s.pipeline_id=p.id GROUP BY p.id ORDER BY p.pos`);
+		select.forEach(x => {
+			x.steps = JSON.parse(x.steps)
+		})
 		res.send(select);
 	}catch(e){
+		console.log(e);
 		res.status(500).send(e);
 	}
-})
+});
 
 router.put('/api/update/step', async function(req, res){
 	var id = req.body.lead_id;
@@ -93,15 +97,34 @@ router.put('/api/update/step', async function(req, res){
 	}catch(e){
 		res.status(500).send(e);
 	}
-})
+});
 
-router.post('/api/delete/lead', async function(req, res){
-	var id = req.body.id;
+router.delete('/api/delete/lead/:id', async function(req, res){
+	var id = req.params.id;
 	try{
 		var update = await con.query(`UPDATE leads SET is_deleted = 1 WHERE id = ${id}`);
 		res.send(update)
 	}catch(e){
 		console.log(e);
+		res.status(500).send(e);
+	}
+});
+
+router.post('/api/select/card', async function(req, res){
+	try{
+		var select = await con.query(`SELECT L.id lead_id, L.name lead_name, L.budget budget, L.created_at created_at,
+									L.updated_at updated_at, L.pipeline_id pipe_id, L.status step_id,
+									C.id contact_id, C.name main_contact,
+									LC.id company_id, LC.name company_name,
+									U.id user_id, U.name user_name,
+									JSON_ARRAYAGG(JSON_OBJECT('id', CF.id, 'name', CF.name)) custom_fields
+									FROM leads L 
+									LEFT JOIN contacts C ON L.main_contact_id = C.id
+									LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
+									LEFT JOIN `)
+		res.send()
+	}catch(e){
+		console.log(e)
 		res.status(500).send(e);
 	}
 })
