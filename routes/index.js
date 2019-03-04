@@ -74,6 +74,16 @@ router.post('/api/select/step', async function(req, res){
 	}
 })
 
+router.get('/api/select/pipe_step', async function(req, res){
+	try{
+		var select = await con.query(`SELECT p.id, p.name, JSON_ARRAYAGG(JSON_OBJECT('id',s.id,'name',s.name,'company_id',s.company_id)) steps 
+									FROM pipelines p LEFT JOIN step s ON s.pipeline_id=p.id GROUP BY p.id`)
+		res.send(select);
+	}catch(e){
+		res.status(500).send(e);
+	}
+})
+
 router.put('/api/update/step', async function(req, res){
 	var id = req.body.lead_id;
 	var s_id = req.body.s_id;

@@ -11,42 +11,9 @@ var query = new Query(con);
 
 var router = express.Router();
 
-router.post('/test', async function(req, res){
-	let id = req.body.id;
-	try{
-		var selPipe = await query.select({table: 'pipelines', where: {id: id}});
-		console.log(selPipe)
-		if(selPipe == 60){
-			//var selCF = await query.seelct({table: 'custom_fields', where: {id: }})
-		}
-		res.send()
-	}catch(e){
-		console.log(e);
-		res.status(500).send(e);
-	}
-})
-
 router.post('/export', async function(req, res){
 	var id = req.body.id;
 	try{
-		var selectLeads = await query.select({table: 'leads', where: {id: id}});
-		var selectUsers = await query.select({table: 'users', where: {id: selectLeads[0].resp_user_id}})
-		var selectIIN = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 41}})
-		var selectFilial = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 25}})
-		var selectTypePogruz = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 28}})
-		var selectMarsh = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 31}})
-		var selectKazBillNum = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 45}})
-		var selectDevFrom = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 48}})
-		var selectDevTo = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 49}})
-		var selectOplataRuss = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 50}})
-		var selectRussBillNum = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 51}})
-		var selectPercent = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 52}})
-		var dateOtgruz = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 53}})
-		var selectOtgruzka = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 54}})
-		var selectNDS = await query.select({table: 'leads_value', where: {leads_id: id, field_id: 55}})
-
-
-		console.log(selectFilial)
 		// You can define styles as json object
 		const styles = {
 		  headerDark: {
@@ -279,24 +246,24 @@ router.post('/export', async function(req, res){
 		// that are listed in the report specification
 		const dataset = [
 			{
-				filial: selectFilial[0] ? selectFilial[0].value : '',
-				crmId: id,
-				addDate: selectLeads[0].created_at,
+				filial: '',
+				crmId: '',
+				addDate: '',
 				russian_post: '',
-				IIN: selectIIN[0] ? selectIIN[0].value : '',
-				russBillNum: selectRussBillNum[0] ? selectRussBillNum[0].value : '',
-				oplataRuss: selectOplataRuss[0] ? selectOplataRuss[0].value : '',
+				IIN: '',
+				russBillNum: '',
+				oplataRuss: '',
 				oplataRussNds: '',
-				NDS: selectNDS[0] ? selectNDS[0].value : '',
+				NDS: '',
 				summWithNad: '',
-				otgruzka: selectOtgruzka[0] ? selectOtgruzka[0].value : '',
-				cityFrom: selectDevFrom[0] ? selectDevFrom[0].value : '',
-				cityTo: selectDevTo[0] ? selectDevTo[0].value : '',
+				otgruzka: '',
+				cityFrom: '',
+				cityTo: '',
 				typeDostavka: '',
-				kazBillNum: selectKazBillNum[0] ? selectKazBillNum[0].value : '',
-				percent: selectPercent[0] ? selectPercent[0].value : '',
+				kazBillNum: '',
+				percent: '',
 				rubKurs: '',
-				manager: selectUsers[0] ? selectUsers[0].name : '',
+				manager: '',
 				prim: '',
 				vkl: '',
 				billNoDelivery: '',
@@ -326,50 +293,52 @@ router.post('/export', async function(req, res){
 		// Define an array of merges. 1-1 = A:1
 		// The merges are independent of the data.
 		// A merge will overwrite all data _not_ in the top-left cell.
-		const merges = [
-		  { start: { row: 1, column: 1 }, end: { row: 1, column: 1 } },
-		  { start: { row: 1, column: 2 }, end: { row: 1, column: 2 } },
-		  { start: { row: 1, column: 3 }, end: { row: 1, column: 3 } },
-		  { start: { row: 1, column: 4 }, end: { row: 1, column: 4 } },
-		  { start: { row: 1, column: 5 }, end: { row: 1, column: 5 } },
-		  { start: { row: 1, column: 6 }, end: { row: 1, column: 6 } },
-		  { start: { row: 1, column: 7 }, end: { row: 1, column: 7 } },
-		  { start: { row: 1, column: 8 }, end: { row: 1, column: 8 } },
-		  { start: { row: 1, column: 9 }, end: { row: 1, column: 9 } },
-		  { start: { row: 1, column: 10}, end: { row: 1, column: 10} },
-		  { start: { row: 1, column: 11}, end: { row: 1, column: 11} },
-		  { start: { row: 1, column: 12}, end: { row: 1, column: 12} },
-		  { start: { row: 1, column: 13}, end: { row: 1, column: 13} },
-		  { start: { row: 1, column: 14}, end: { row: 1, column: 14} },
-		  { start: { row: 1, column: 15}, end: { row: 1, column: 15} },
-		  { start: { row: 1, column: 16}, end: { row: 1, column: 16} },
-		  { start: { row: 1, column: 17}, end: { row: 1, column: 17} },
-		  { start: { row: 1, column: 18}, end: { row: 1, column: 18} },
-		  { start: { row: 1, column: 19}, end: { row: 1, column: 19} },
-		  { start: { row: 1, column: 20}, end: { row: 1, column: 20} },
-		  { start: { row: 1, column: 21}, end: { row: 1, column: 21} },
-		  { start: { row: 1, column: 22}, end: { row: 1, column: 22} },
-		  { start: { row: 1, column: 23}, end: { row: 1, column: 23} },
-		  { start: { row: 1, column: 24}, end: { row: 1, column: 24} },
-		  { start: { row: 1, column: 25}, end: { row: 1, column: 25} },
-		  { start: { row: 2, column: 26}, end: { row: 2, column: 26} },
-		  { start: { row: 2, column: 27}, end: { row: 2, column: 27} },
-		  { start: { row: 1, column: 28}, end: { row: 1, column: 28} },
-		  { start: { row: 1, column: 29}, end: { row: 1, column: 29} },
-		  { start: { row: 1, column: 30}, end: { row: 1, column: 30} },
-		  { start: { row: 1, column: 31}, end: { row: 1, column: 31} },
-		  { start: { row: 1, column: 32}, end: { row: 1, column: 32} },
-		  { start: { row: 1, column: 33}, end: { row: 1, column: 33} },
-		  { start: { row: 1, column: 34}, end: { row: 1, column: 34} },
-		  { start: { row: 1, column: 35}, end: { row: 1, column: 35} },
-		  { start: { row: 1, column: 36}, end: { row: 1, column: 36} },
-		  { start: { row: 1, column: 37}, end: { row: 1, column: 37} },
-		  { start: { row: 1, column: 38}, end: { row: 1, column: 38} },
-		  { start: { row: 1, column: 39}, end: { row: 1, column: 39} },
-		  { start: { row: 1, column: 40}, end: { row: 1, column: 40} },
-		  { start: { row: 1, column: 41}, end: { row: 1, column: 41} },
+		for(var n = 1; n < 41; n++){
+			const merges = [
+			  { start: { row: 1, column: n }, end: { row: 1, column: n } }
+			  // { start: { row: 1, column: 2 }, end: { row: 1, column: 2 } },
+			  // { start: { row: 1, column: 3 }, end: { row: 1, column: 3 } },
+			  // { start: { row: 1, column: 4 }, end: { row: 1, column: 4 } },
+			  // { start: { row: 1, column: 5 }, end: { row: 1, column: 5 } },
+			  // { start: { row: 1, column: 6 }, end: { row: 1, column: 6 } },
+			  // { start: { row: 1, column: 7 }, end: { row: 1, column: 7 } },
+			  // { start: { row: 1, column: 8 }, end: { row: 1, column: 8 } },
+			  // { start: { row: 1, column: 9 }, end: { row: 1, column: 9 } },
+			  // { start: { row: 1, column: 10}, end: { row: 1, column: 10} },
+			  // { start: { row: 1, column: 11}, end: { row: 1, column: 11} },
+			  // { start: { row: 1, column: 12}, end: { row: 1, column: 12} },
+			  // { start: { row: 1, column: 13}, end: { row: 1, column: 13} },
+			  // { start: { row: 1, column: 14}, end: { row: 1, column: 14} },
+			  // { start: { row: 1, column: 15}, end: { row: 1, column: 15} },
+			  // { start: { row: 1, column: 16}, end: { row: 1, column: 16} },
+			  // { start: { row: 1, column: 17}, end: { row: 1, column: 17} },
+			  // { start: { row: 1, column: 18}, end: { row: 1, column: 18} },
+			  // { start: { row: 1, column: 19}, end: { row: 1, column: 19} },
+			  // { start: { row: 1, column: 20}, end: { row: 1, column: 20} },
+			  // { start: { row: 1, column: 21}, end: { row: 1, column: 21} },
+			  // { start: { row: 1, column: 22}, end: { row: 1, column: 22} },
+			  // { start: { row: 1, column: 23}, end: { row: 1, column: 23} },
+			  // { start: { row: 1, column: 24}, end: { row: 1, column: 24} },
+			  // { start: { row: 1, column: 25}, end: { row: 1, column: 25} },
+			  // { start: { row: 2, column: 26}, end: { row: 2, column: 26} },
+			  // { start: { row: 2, column: 27}, end: { row: 2, column: 27} },
+			  // { start: { row: 1, column: 28}, end: { row: 1, column: 28} },
+			  // { start: { row: 1, column: 29}, end: { row: 1, column: 29} },
+			  // { start: { row: 1, column: 30}, end: { row: 1, column: 30} },
+			  // { start: { row: 1, column: 31}, end: { row: 1, column: 31} },
+			  // { start: { row: 1, column: 32}, end: { row: 1, column: 32} },
+			  // { start: { row: 1, column: 33}, end: { row: 1, column: 33} },
+			  // { start: { row: 1, column: 34}, end: { row: 1, column: 34} },
+			  // { start: { row: 1, column: 35}, end: { row: 1, column: 35} },
+			  // { start: { row: 1, column: 36}, end: { row: 1, column: 36} },
+			  // { start: { row: 1, column: 37}, end: { row: 1, column: 37} },
+			  // { start: { row: 1, column: 38}, end: { row: 1, column: 38} },
+			  // { start: { row: 1, column: 39}, end: { row: 1, column: 39} },
+			  // { start: { row: 1, column: 40}, end: { row: 1, column: 40} },
+			  // { start: { row: 1, column: 41}, end: { row: 1, column: 41} },
 
-		]
+			]
+		}
 		 
 		// Create the excel report.
 		// This function will return Buffer
