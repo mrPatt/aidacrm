@@ -84,8 +84,6 @@ router.get('/api/select/pipe_step', async function(req, res){
 	}
 })
 
-//a
-
 router.put('/api/update/step', async function(req, res){
 	var id = req.body.lead_id;
 	var s_id = req.body.s_id;
@@ -93,6 +91,17 @@ router.put('/api/update/step', async function(req, res){
 		var update = await con.query(`UPDATE leads SET status = ${s_id} WHERE id = ${id}`)
 		res.send(update);
 	}catch(e){
+		res.status(500).send(e);
+	}
+})
+
+router.post('/api/delete/lead', async function(req, res){
+	var id = req.body.id;
+	try{
+		var update = await con.query(`UPDATE leads SET is_deleted = 1 WHERE id = ${id}`);
+		res.send(update)
+	}catch(e){
+		console.log(e);
 		res.status(500).send(e);
 	}
 })
