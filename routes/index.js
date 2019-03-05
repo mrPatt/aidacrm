@@ -23,7 +23,7 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN contacts C ON L.main_contact_id = C.id
 										LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
-										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id}
+										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND L.is_deleted = 0
 										ORDER BY L.created_at DESC LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id}`)
@@ -38,7 +38,7 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN contacts C ON L.main_contact_id = C.id
 										LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
-										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} 
+										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} AND L.is_deleted = 0
 										ORDER BY L.created_at DESC LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
@@ -110,24 +110,98 @@ router.delete('/api/delete/lead/:id', async function(req, res){
 	}
 });
 
-router.post('/api/select/card', async function(req, res){
+router.get('/api/select/lead/:id', async function(req, res){
+	var id = req.params.id;
 	try{
-		var select = await con.query(`SELECT L.id lead_id, L.name lead_name, L.budget budget, L.created_at created_at,
-									L.updated_at updated_at, L.pipeline_id pipe_id, L.status step_id,
-									C.id contact_id, C.name main_contact,
-									LC.id company_id, LC.name company_name,
-									U.id user_id, U.name user_name,
-									JSON_ARRAYAGG(JSON_OBJECT('id', CF.id, 'name', CF.name)) custom_fields
-									FROM leads L 
-									LEFT JOIN contacts C ON L.main_contact_id = C.id
-									LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
-									LEFT JOIN `)
-		res.send()
+		var select = await con.query(`SELECT 
+										l.id id, 
+										l.name lead_name, 
+										l.budget budget, 
+										l.created_at created_at,
+										l.updated_at updated_at,
+										u.name resp_user_name,
+										JSON_ARRAYAGG(JSON_OBJECT('asdf',cf.name,'values',JSON_ARRAYAGG(JSON_OBJECT('asdf1', lv.value)))) custom_fields
+									FROM 
+										leads l
+									LEFT JOIN
+										leads_value lv
+									ON
+										lv.leads_id = l.id
+									LEFT JOIN
+										users u
+									ON
+										u.id = l.resp_user_id
+									LEFT JOIN
+										custom_fields cf
+									ON
+										cf.id = lv.field_id 
+									WHERE 
+										l.id = ${id}`)
+		res.send(select)
 	}catch(e){
 		console.log(e)
 		res.status(500).send(e);
 	}
 })
+
+/*router.get('/api/select/card/:id', async function(req, res){
+	var id = req.params.id;
+	try{
+		var select = await con.query(`SELECT 
+									  l.id leads_id,
+									  l.name leads_name,
+									  lv.value leads_value,
+									  c.id contact_id,
+									  c.name contact_name,
+									  cv.value contact_value,
+									  cf.id  custom_field_id,
+									  cf.name custom_field_name,
+									  lcv.value leads_company_value,
+									  lcom.id leads_company_id,
+									  lcom.name leads_company_name,
+									  cf.group_id,
+									  cg.name groups
+									FROM 
+									  leads l
+									LEFT JOIN 
+									  leads_value lv
+									ON 
+									  lv.leads_id = l.id
+									JOIN 
+									  leads_contacts lc
+									ON
+									  lc.leads_id=l.id
+									JOIN 
+									  contacts c
+									ON
+									  c.id=lc.contact_id
+									LEFT JOIN
+									  contacts_value cv
+									ON
+									  cv.contact_id=c.id
+									LEFT JOIN
+									  custom_fields cf
+									ON
+									  cf.id=cv.field_id
+									LEFT JOIN 
+									  leads_company_value lcv
+									ON 
+									  lcv.field_id = cf.id
+									LEFT JOIN
+									  leads_company lcom
+									 ON 
+									  lcom.id=lcv.leads_company_id
+									LEFT JOIN
+									  card_groups cg
+									ON
+									  cg.id=cf.group_id WHERE l.id = ${id}`)
+		res.send(select)
+	}catch(e){
+		console.log(e)
+		res.status(500).send(e);
+	}
+});*/
+
 
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
