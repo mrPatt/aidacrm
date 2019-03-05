@@ -23,7 +23,7 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN contacts C ON L.main_contact_id = C.id
 										LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
-										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND L.is_deleted = 0
+										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND L.is_deleted IS NULL OR L.is_deleted = 0
 										ORDER BY L.created_at DESC LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id}`)
@@ -38,7 +38,7 @@ router.post('/api/select', async function(req, res){
 										LEFT JOIN contacts C ON L.main_contact_id = C.id
 										LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
 										LEFT JOIN pipelines P ON L.pipeline_id = P.id
-										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} AND L.is_deleted = 0
+										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} AND L.is_deleted IS NULL OR L.is_deleted = 0
 										ORDER BY L.created_at DESC LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
