@@ -113,95 +113,38 @@ router.delete('/api/delete/lead/:id', async function(req, res){
 router.get('/api/select/lead/:id', async function(req, res){
 	var id = req.params.id;
 	try{
-		var select = await con.query(`SELECT 
-										l.id id, 
-										l.name lead_name, 
-										l.budget budget, 
-										l.created_at created_at,
-										l.updated_at updated_at,
-										u.name resp_user_name,
-										JSON_ARRAYAGG(JSON_OBJECT('asdf',cf.name,'values',JSON_ARRAYAGG(JSON_OBJECT('asdf1', lv.value)))) custom_fields
-									FROM 
-										leads l
-									LEFT JOIN
-										leads_value lv
-									ON
-										lv.leads_id = l.id
-									LEFT JOIN
-										users u
-									ON
-										u.id = l.resp_user_id
-									LEFT JOIN
-										custom_fields cf
-									ON
-										cf.id = lv.field_id 
-									WHERE 
-										l.id = ${id}`)
-		res.send(select)
-	}catch(e){
-		console.log(e)
-		res.status(500).send(e);
-	}
-})
-
-/*router.get('/api/select/card/:id', async function(req, res){
-	var id = req.params.id;
-	try{
-		var select = await con.query(`SELECT 
-									  l.id leads_id,
-									  l.name leads_name,
-									  lv.value leads_value,
-									  c.id contact_id,
-									  c.name contact_name,
-									  cv.value contact_value,
-									  cf.id  custom_field_id,
-									  cf.name custom_field_name,
-									  lcv.value leads_company_value,
-									  lcom.id leads_company_id,
-									  lcom.name leads_company_name,
-									  cf.group_id,
-									  cg.name groups
+		var selectLead = await con.query(`SELECT 
+									  l.id id, 
+									  l.name lead_name, 
+									  l.budget budget, 
+									  l.created_at created_at,
+									  l.updated_at updated_at,
+									  u.name resp_user_name,
+									  JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 'name', cf.name, 'value_id', lv.id, 'value', lv.value)) custom_fields
 									FROM 
 									  leads l
-									LEFT JOIN 
-									  leads_value lv
-									ON 
-									  lv.leads_id = l.id
-									JOIN 
-									  leads_contacts lc
-									ON
-									  lc.leads_id=l.id
-									JOIN 
-									  contacts c
-									ON
-									  c.id=lc.contact_id
 									LEFT JOIN
-									  contacts_value cv
+									  leads_value lv
 									ON
-									  cv.contact_id=c.id
+									  lv.leads_id = l.id
+									LEFT JOIN
+									  users u
+									ON
+									  u.id = l.resp_user_id
 									LEFT JOIN
 									  custom_fields cf
 									ON
-									  cf.id=cv.field_id
-									LEFT JOIN 
-									  leads_company_value lcv
-									ON 
-									  lcv.field_id = cf.id
-									LEFT JOIN
-									  leads_company lcom
-									 ON 
-									  lcom.id=lcv.leads_company_id
-									LEFT JOIN
-									  card_groups cg
-									ON
-									  cg.id=cf.group_id WHERE l.id = ${id}`)
-		res.send(select)
+									  cf.id = lv.field_id
+									WHERE
+									  l.id = ${id}
+									GROUP BY
+									   l.id`)
+		res.send(selectLead)
 	}catch(e){
 		console.log(e)
 		res.status(500).send(e);
 	}
-});*/
-
+});
 
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
