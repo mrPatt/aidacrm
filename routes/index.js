@@ -344,6 +344,77 @@ router.get('/api/select/lead/:id', async function(req, res){
 	}
 });
 
+router.get('/api/select/all', async function(req, res){
+	try{
+		var select = await con.query(`SELECT 
+											L.id leads_id, 
+											L.name leads_name,
+											L.budget budget,
+											L.created_at leads_created_at,
+											L.main_contact_id main_contact,
+											L.leads_company_id leads_company,
+											C.id main_contact_id,
+											C.name contact_name,
+											LC.id leads_company_id,
+											LC.name company_name,
+											P.id pipeline_id,
+											P.name  pipeline_name,
+											P.pos pipeline_position,
+											S.id step_id,
+											S.name step_name,
+											S.position step_position
+										FROM 
+											leads L
+										LEFT JOIN 
+											contacts C 
+										ON 
+											L.main_contact_id = C.id
+										LEFT JOIN 
+											leads_company LC 
+										ON 
+											L.leads_company_id = LC.id
+										LEFT JOIN 
+											pipelines P 
+										ON 
+											L.pipeline_id = P.id
+										LEFT JOIN 
+											step S 
+										ON 
+											L.status = S.id 
+										WHERE
+											L.is_deleted IS NULL 
+										OR 
+											L.is_deleted = 0
+										ORDER BY 
+											L.created_at DESC 
+										LIMIT 40`)
+			var selCount = await con.query(`SELECT COUNT(*) AS count 
+											FROM 
+												leads 
+											WHERE
+												is_deleted IS NULL 
+											OR 
+												is_deleted = 0`)
+			var selSumm = await con.query(`SELECT SUM(budget) sumBudget 
+											FROM 
+												leads 
+											WHERE
+												is_deleted IS NULL 
+											OR 
+												is_deleted = 0`)
+		selCount = selCount[0].count;
+		selSumm = selSumm[0].sumBudget;
+		res.status(200).json({
+			select, 
+			selCount, 
+			selSumm
+		});
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+})
+
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
 	var like = req.body.like;
