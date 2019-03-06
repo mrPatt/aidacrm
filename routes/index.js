@@ -8,6 +8,7 @@ var query = new Query(con);
 
 var router = express.Router();
 
+//select all leads by pipeline or pipeline with step limit 20
 router.post('/api/select', async function(req, res){
 	var p_id = req.body.p_id;
 	var s_id = req.body.s_id;
@@ -55,7 +56,7 @@ router.post('/api/select', async function(req, res){
 										OR 
 											L.is_deleted = 0
 										ORDER BY 
-											L.created_at DESC 
+											L.updated_at DESC 
 										LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count 
 											FROM 
@@ -121,7 +122,7 @@ router.post('/api/select', async function(req, res){
 										OR 
 											L.is_deleted = 0
 										ORDER BY 
-											L.created_at DESC 
+											L.updated_at DESC 
 										LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count 
 											FROM 
@@ -151,6 +152,7 @@ router.post('/api/select', async function(req, res){
 	}
 });
 
+//select all pipelines
 router.get('/api/select/pipeline', async function(req, res){
 	try{
 		var select = await con.query(`SELECT id, name FROM pipelines ORDER BY pos`);
@@ -161,6 +163,7 @@ router.get('/api/select/pipeline', async function(req, res){
 	}
 });
 
+//select all steps by pipeline
 router.post('/api/select/step', async function(req, res){
 	var p_id = req.body.p_id;
 	try{
@@ -172,6 +175,7 @@ router.post('/api/select/step', async function(req, res){
 	}
 });
 
+//select all pipelines with steps
 router.get('/api/select/pipe_step', async function(req, res){
 	try{
 		var select = await con.query(`SELECT 
@@ -198,6 +202,7 @@ router.get('/api/select/pipe_step', async function(req, res){
 	}
 });
 
+//update lead step id
 router.put('/api/update/step', async function(req, res){
 	var id = req.body.lead_id;
 	var s_id = req.body.s_id;
@@ -214,6 +219,7 @@ router.put('/api/update/step', async function(req, res){
 	}
 });
 
+//delete lead, give is_deleted 1
 router.delete('/api/delete/lead/:id', async function(req, res){
 	var id = req.params.id;
 	try{
@@ -230,6 +236,7 @@ router.delete('/api/delete/lead/:id', async function(req, res){
 	}
 });
 
+//select lead card 
 router.get('/api/select/lead/:id', async function(req, res){
 	var id = req.params.id;
 	try{
@@ -344,6 +351,7 @@ router.get('/api/select/lead/:id', async function(req, res){
 	}
 });
 
+//select all leads
 router.get('/api/select/all', async function(req, res){
 	try{
 		var select = await con.query(`SELECT 
@@ -413,7 +421,9 @@ router.get('/api/select/all', async function(req, res){
 		console.log(e);
 		res.status(500).send(e);
 	}
-})
+});
+
+router.put()
 
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;

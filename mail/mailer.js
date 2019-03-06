@@ -18,6 +18,7 @@ var query = new Query(con);
 
 var router = express.Router();
 
+//add new mail address
 router.post('/add', async function(req, res){
 	var data = req.body;
 	try{
@@ -29,6 +30,7 @@ router.post('/add', async function(req, res){
 	}
 });
 
+//send messages
 router.post('/send', async function(req, res){
 	var mail_id = req.body.id;
 	console.log(req.body)
@@ -93,6 +95,7 @@ router.post('/send', async function(req, res){
 	};
 });
 
+//check for apostrophe
 function apos(a){
 	if(typeof a == 'string'){
 		if(a.includes("'")){
@@ -108,7 +111,7 @@ function apos(a){
 		return a;
 	}
 }
-
+//convert to UTF8
 function toUTF8(body) {
   // convert from iso-8859-1 to utf-8
   var ic = new iconv.Iconv('iso-8859-1', 'utf-8');
@@ -116,6 +119,7 @@ function toUTF8(body) {
   return buf.toString('utf-8');
 }
 
+//refresh mailbox
 router.post('/refresh', async function(req, res){
 	var mail_id = req.body.id;
 	try{
@@ -232,6 +236,7 @@ router.post('/refresh', async function(req, res){
 
 });
 
+//open all unseen messages
 router.post('/inbox', async function(req, res){
 	var mail_id = req.body.id;
 	try{
@@ -344,7 +349,7 @@ router.post('/inbox', async function(req, res){
 
 });
 
-
+//download all attachments from unseen messages
 router.post('/attachments', async function(req, res){
 	var mail_id = req.body.id;
 	try{
