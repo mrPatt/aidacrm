@@ -13,34 +13,100 @@ router.post('/api/select', async function(req, res){
 	var s_id = req.body.s_id;
 	try{
 		if(!s_id){
-			var select = await con.query(`SELECT L.id leads_id , L.name leads_name, L.budget budget, L.created_at leads_created_at, 
-										L.main_contact_id main_contact, L.leads_company_id leads_company,
-										C.id main_contact_id, C.name contact_name,
-										LC.id leads_company_id, LC.name company_name, 
-										P.id pipeline_id,P.name  pipeline_name, P.pos pipeline_position,
-										S.id step_id, S.name step_name, S.position step_position 
-										FROM leads L
-										LEFT JOIN contacts C ON L.main_contact_id = C.id
-										LEFT JOIN leads_company LC ON L.leads_company_id = LC.id
-										LEFT JOIN pipelines P ON L.pipeline_id = P.id
-										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND L.is_deleted IS NULL OR L.is_deleted = 0
-										ORDER BY L.created_at DESC LIMIT 20`)
+			var select = await con.query(`SELECT 
+											L.id leads_id, 
+											L.name leads_name,
+											L.budget budget,
+											L.created_at leads_created_at,
+											L.main_contact_id main_contact,
+											L.leads_company_id leads_company,
+											C.id main_contact_id,
+											C.name contact_name,
+											LC.id leads_company_id,
+											LC.name company_name,
+											P.id pipeline_id,
+											P.name  pipeline_name,
+											P.pos pipeline_position,
+											S.id step_id,
+											S.name step_name,
+											S.position step_position
+										FROM 
+											leads L
+										LEFT JOIN 
+											contacts C 
+										ON 
+											L.main_contact_id = C.id
+										LEFT JOIN 
+											leads_company LC 
+										ON 
+											L.leads_company_id = LC.id
+										LEFT JOIN 
+											pipelines P 
+										ON 
+											L.pipeline_id = P.id
+										LEFT JOIN 
+											step S 
+										ON 
+											L.status = S.id 
+										WHERE 
+											P.id = ${p_id} 
+										AND 
+											L.is_deleted IS NULL 
+										OR 
+											L.is_deleted = 0
+										ORDER BY 
+											L.created_at DESC 
+										LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND is_deleted IS NULL OR is_deleted = 0`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND is_deleted IS NULL OR is_deleted = 0`)
 		}else{
 										
-			var select = await con.query(`SELECT L.id leads_id , L.name leads_name, L.budget budget, L.created_at leads_created_at, 
-										L.main_contact_id main_contact, L.leads_company_id leads_company,
-										C.id main_contact_id, C.name contact_name,
-										LC.id leads_company_id, LC.name company_name, 
-										P.id pipeline_id,P.name  pipeline_name, P.pos pipeline_position,
-										S.id step_id, S.name step_name, S.position step_position 
-										FROM leads L
-										LEFT JOIN contacts C ON L.main_contact_id = C.id
-										LEFT JOIN leads_compny LC ON L.leads_company_id = LC.id
-										LEFT JOIN pipelines P ON L.pipeline_id = P.id
-										LEFT JOIN step S ON L.status = S.id WHERE P.id = ${p_id} AND S.id = ${s_id} AND L.is_deleted IS NULL OR L.is_deleted = 0
-										ORDER BY L.created_at DESC LIMIT 20`)
+			var select = await con.query(`SELECT 
+											L.id leads_id, 
+											L.name leads_name,
+											L.budget budget,
+											L.created_at leads_created_at,
+											L.main_contact_id main_contact,
+											L.leads_company_id leads_company,
+											C.id main_contact_id,
+											C.name contact_name,
+											LC.id leads_company_id,
+											LC.name company_name,
+											P.id pipeline_id,
+											P.name  pipeline_name,
+											P.pos pipeline_position,
+											S.id step_id,
+											S.name step_name,
+											S.position step_position
+										FROM 
+											leads L
+										LEFT JOIN 
+											contacts C 
+										ON 
+											L.main_contact_id = C.id
+										LEFT JOIN 
+											leads_company LC 
+										ON 
+											L.leads_company_id = LC.id
+										LEFT JOIN 
+											pipelines P 
+										ON 
+											L.pipeline_id = P.id
+										LEFT JOIN 
+											step S 
+										ON 
+											L.status = S.id 
+										WHERE 
+											P.id = ${p_id} 
+										AND
+											status = ${s_id}
+										AND
+											L.is_deleted IS NULL 
+										OR 
+											L.is_deleted = 0
+										ORDER BY 
+											L.created_at DESC 
+										LIMIT 20`)
 			var selCount = await con.query(`SELECT COUNT(*) AS count FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget FROM leads WHERE pipeline_id = ${p_id} AND status = ${s_id}`)
 			
@@ -80,8 +146,20 @@ router.post('/api/select/step', async function(req, res){
 
 router.get('/api/select/pipe_step', async function(req, res){
 	try{
-		var select = await con.query(`SELECT p.id, p.name, JSON_ARRAYAGG(JSON_OBJECT('id',s.id,'name',s.name,'company_id',s.company_id)) steps 
-									FROM pipelines p LEFT JOIN step s ON s.pipeline_id=p.id GROUP BY p.id ORDER BY p.pos`);
+		var select = await con.query(`SELECT 
+										p.id, 
+										p.name, 
+										JSON_ARRAYAGG(JSON_OBJECT('id',s.id,'name',s.name,'company_id',s.company_id)) steps 
+									FROM 
+										pipelines p 
+									LEFT JOIN 
+										step s 
+									ON 
+										s.pipeline_id=p.id 
+									GROUP BY 
+										p.id 
+									ORDER BY 
+										p.pos`);
 		select.forEach(x => {
 			x.steps = JSON.parse(x.steps)
 		})
@@ -96,7 +174,12 @@ router.put('/api/update/step', async function(req, res){
 	var id = req.body.lead_id;
 	var s_id = req.body.s_id;
 	try{
-		var update = await con.query(`UPDATE leads SET status = ${s_id} WHERE id = ${id}`)
+		var update = await con.query(`UPDATE 
+										leads 
+									SET 
+										status = ${s_id} 
+									WHERE 	
+										id = ${id}`)
 		res.send(update);
 	}catch(e){
 		res.status(500).send(e);
@@ -106,7 +189,12 @@ router.put('/api/update/step', async function(req, res){
 router.delete('/api/delete/lead/:id', async function(req, res){
 	var id = req.params.id;
 	try{
-		var update = await con.query(`UPDATE leads SET is_deleted = 1 WHERE id = ${id}`);
+		var update = await con.query(`UPDATE 
+										leads 
+									SET 
+										is_deleted = 1 
+									WHERE 
+										id = ${id}`);
 		res.send(update)
 	}catch(e){
 		console.log(e);
@@ -118,31 +206,31 @@ router.get('/api/select/lead/:id', async function(req, res){
 	var id = req.params.id;
 	try{
 		var selectLead = await con.query(`SELECT 
-									  l.id id, 
-									  l.name lead_name, 
-									  l.budget budget, 
-									  l.created_at created_at,
-									  l.updated_at updated_at,
-									  u.name resp_user_name,
-									  JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 'name', cf.name, 'value_id', lv.id, 'value', lv.value)) custom_fields
-									FROM 
-									  leads l
-									LEFT JOIN
-									  leads_value lv
-									ON
-									  lv.leads_id = l.id
-									LEFT JOIN
-									  users u
-									ON
-									  u.id = l.resp_user_id
-									LEFT JOIN
-									  custom_fields cf
-									ON
-									  cf.id = lv.field_id
-									WHERE
-									  l.id = ${id}
-									GROUP BY
-									   l.id`)
+											l.id id, 
+											l.name lead_name, 
+											l.budget budget, 
+											l.created_at created_at,
+											l.updated_at updated_at,
+										 	u.name resp_user_name,
+										 	JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 'name', cf.name, 'value_id', lv.id, 'value', lv.value)) custom_fields
+										FROM 
+											leads l
+										LEFT JOIN
+											leads_value lv
+										ON
+											lv.leads_id = l.id
+										LEFT JOIN
+											users u
+										ON
+											u.id = l.resp_user_id
+										LEFT JOIN
+										  	custom_fields cf
+										ON
+										  	cf.id = lv.field_id
+										WHERE
+										  	l.id = ${id}
+										GROUP BY
+										   l.id`)
 		var selectContact = await con.query(`SELECT 
 												lc.contact_id contact_id,
 												c.name contact_name,
