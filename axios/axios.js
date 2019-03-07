@@ -59,7 +59,7 @@ router.post('/users', async function(req, res){
 
 router.post('/contacts', async function(req, res){
 	
-	var a = 10000;
+	var a = 1;
 	try{
 		for(var f=0; f<36; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
@@ -180,7 +180,7 @@ router.post('/contacts', async function(req, res){
 });
 
 router.post('/company', async function(req, res){
-	var a = 10000
+	var a = 1;
 	try{
 		for(var f=0; f<23; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
@@ -670,8 +670,14 @@ router.get('/auth', async function(req, res){
 router.post('/test', async function(req, res){
 
 	try{
-		console.log('test')
-		res.redirect(300, '/axios/test2')
+		var axi = await axios('https://azim.amocrm.ru/api/v2/account?with=pipelines', {
+			method: 'get',
+			headers: {
+				Cookie: `session_id=${token}`
+			},
+			withCredentials: true
+		});
+		var select = await query.insert({table: 'contacts', data: data[i].company[0].id})
 	} catch(e){
 		res.status(500).send();
 	}
