@@ -265,17 +265,15 @@ router.post('/company', async function(req, res){
 									leads_company_id: insertCompany.insertId};
 									var insertCV = await query.insert({table: 'leads_company_value', data: iCV});
 									console.log(iCV);
-								} else {
-									selectCV = selectCV[0];
-									var insertCV = {insertId: selectCV.id}
-									var iCV =	{value: data[i].custom_fields[j].values[k].value, field_id: insertCF.insertId, 
-											contact_id: insertContact.insertId};
-									selectCV = selectCV[0];
-									var insertCV = {insertId: selectCV.id};
-									var updateCV = await query.update({table: 'contacts_value', where: {id: insertCV.insertId}, data: iCV})
-								}
+							} else {
+								selectCV = selectCV[0];
+								var insertCV = {insertId: selectCV.id};
+								var iCV =	{value: data[i].custom_fields[j].values[k].value, field_id: insertCF.insertId, 
+										leads_company_id: insertCompany.insertId};
+								var updateCV = await query.update({table: 'leads_company_value', where: {id: insertCV.insertId}, data: iCV})
 							}
 						}
+					}
 
 						for(var j=0; j<data[i].tags.length; j++){
 							var selectTag = await query.select({table: 'tags', where: {name: data[i].tags[j].name}});
@@ -312,7 +310,7 @@ router.post('/company', async function(req, res){
 router.post('/leads', async function(req, res){
 	var a = 1;
 	try{
-		for(var f=0; f<32; f++){
+		for(var f=0; f<40; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
 			var axi = await axios(`https://azim.amocrm.ru/api/v2/leads?limit_rows=500&limit_offset=${a}`, {
 				method: 'get',
@@ -388,16 +386,22 @@ router.post('/leads', async function(req, res){
 					var insertLeads = await query.insert({table: 'leads', data: iData});
 					console.log(iData)
 				} else {
+					var closed_at = null;
+					if(data[i].closed_at != 0){
+						closed_at = new Date(data[i].closed_at*1000);
+					}
 					var iData = {name: apos(data[i].name), created_at: new Date(data[i].created_at*1000),
 								 updated_at: new Date(data[i].updated_at*1000),
 								 closed_at: closed_at, created_by: insertUser.insertId,
 								 resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, amo_id: data[i].id, 
 								 status: selectStep[0].id, pipeline_id: selectPipe[0].id, main_contact_id: insertMC.insertId,
 								 leads_company_id: insertLC.insertId};
+					console.log(iData) 
+					var updateLeads = await query.update({table: 'leads', where: {amo_id: data[i].id}, data: iData});
 					selectLeads = selectLeads[0];
 					var insertLeads = {insertId: selectLeads.id};
-					var updateLeads = await query.update({table: 'leads', where: {amo_id: data[i].id}, data: iData})
 				}
+
 				console.log(data[i].contacts.id);
 				if(typeof data[i].contacts.id != 'undefined'){
 					for (var j = 0; j < data[i].contacts.id.length; j++) {
@@ -437,7 +441,7 @@ router.post('/leads', async function(req, res){
 									leads_id: insertLeads.insertId};
 								selectCV = selectCV[0];
 								var insertCV = {insertId: selectCV.id}
-								var updateCV = await query.update({table: 'contacts_value', where: {id: insertCV.insertId}, data: iCV})
+								var updateCV = await query.update({table: 'leads_value', where: {id: insertCV.insertId}, data: iCV})
 								}
 
 							}
@@ -480,7 +484,7 @@ router.get('/budget', async function(req, res){
 	var a = await con.query(`SELECT amo_id FROM amocrm.leads`);
 	var budget = [];
 
-	for(var f = 0; f < a.length; f++){
+	for(var f = 15400; f < a.length; f++){
 		try {
 			var leads  = a[f];
     		var axi = await axios(`https://azim.amocrm.ru/leads/detail/${leads.amo_id}`, {
@@ -492,7 +496,7 @@ router.get('/budget', async function(req, res){
 			});
 			var $ = cheerio.load(axi.data);
             var budget = $('#lead_card_budget').val();
-            var str = budget.replace(/\s/g, '');
+            var str = budget.replace(/\s+/g, '');
             if(str != ''){
             	var vitalya_pidor = await con.query(`UPDATE leads SET budget = ${str} WHERE amo_id = ${leads.amo_id}`)
             } else{
@@ -506,8 +510,8 @@ router.get('/budget', async function(req, res){
        		console.log(e)
     	}
 	}
-    
-})
+});
+
 
 router.post('/pipeline', async function(req, res){
 	try{
@@ -670,14 +674,8 @@ router.get('/auth', async function(req, res){
 router.post('/test', async function(req, res){
 
 	try{
-		var axi = await axios('https://azim.amocrm.ru/api/v2/account?with=pipelines', {
-			method: 'get',
-			headers: {
-				Cookie: `session_id=${token}`
-			},
-			withCredentials: true
-		});
-		var select = await query.insert({table: 'contacts', data: data[i].company[0].id})
+		console.log('test')
+		res.redirect(300, '/axios/test2')
 	} catch(e){
 		res.status(500).send();
 	}

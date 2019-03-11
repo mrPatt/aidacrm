@@ -174,7 +174,13 @@ router.post('/api/select', async function(req, res){
 //select all pipelines
 router.get('/api/select/pipeline', async function(req, res){
 	try{
-		var select = await con.query(`SELECT id, name FROM pipelines ORDER BY pos`);
+		var select = await con.query(`SELECT 
+										id, 
+										name 
+									FROM 
+										pipelines 
+									ORDER BY 
+										pos`);
 		res.send(select)
 	}catch(e){
 		console.log(e);
@@ -242,13 +248,16 @@ router.get('/api/select/pipe_step', async function(req, res){
 router.put('/api/update/step', async function(req, res){
 	var id = req.body.lead_id;
 	var s_id = req.body.s_id;
+	var date = new Date();
 	try{
 		var update = await con.query(`UPDATE 
 										leads 
 									SET 
-										status = ${s_id} 
+										status = ${s_id},
+										updated_at = NOW() 
 									WHERE 	
 										id = ${id}`)
+		console.log(update)
 		res.send(update);
 	}catch(e){
 		res.status(500).send(e);
@@ -372,7 +381,7 @@ router.get('/api/select/lead/:id', async function(req, res){
 											`)
 		var selectUser = await con.query(`SELECT 
 											ug.name user_group,
-											JSON_ARRAYAGG(JSON_OBJECT('name', u.name)) users
+											JSON_ARRAYAGG(JSON_OBJECT('user_id', u.id, 'name', u.name)) users
 										FROM 
 											users u
 										LEFT JOIN 
@@ -429,6 +438,102 @@ router.get('/api/select/lead/:id', async function(req, res){
 	}
 });
 
+
+//create new card
+router.get('/api/select/newlead', async function(req, res){
+	try{
+		var selectPipe = await con.query(`SELECT 
+										p.id, 
+										p.name,
+										JSON_ARRAYAGG(JSON_OBJECT('id',s.id,'name',s.name,'company_id',s.company_id, 'position', s.position, 'color_id', cl.id, 'color_name', cl.name)) steps 
+									FROM 
+										pipelines p 
+									LEFT JOIN 
+										step s 
+									ON 
+										s.pipeline_id=p.id 
+									LEFT JOIN 
+										color cl
+									ON 
+										s.color_id = cl.id 
+									GROUP BY 
+										p.id 
+									ORDER BY 
+										p.pos`);
+		var selectUser = await con.query(`SELECT 
+											ug.name user_group,
+											JSON_ARRAYAGG(JSON_OBJECT('user_id', u.id, 'name', u.name)) users
+										FROM 
+											users u
+										LEFT JOIN 
+											users_group ug
+										ON 
+											u.group_id = ug.id
+										WHERE NOT
+											u.group_id = 9
+										GROUP BY ug.id`)
+		var selectCardGroups = await con.query(`SELECT
+													cg.id id,
+													cg.name name,
+													JSON_ARRAYAGG(JSON_OBJECT('id', cf.id, 'name', cf.name)) custom_fields_list
+												FROM 
+													custom_fields cf 
+												LEFT JOIN
+													card_groups cg 
+												ON 
+													cg.id = cf.group_id
+												GROUP BY 
+													cg.id`)
+		selectPipe.forEach(c => {
+			c.steps = JSON.parse(c.steps)
+		});
+		selectUser.forEach(c => {я
+			c.users = JSON.parse(c.users)
+		});
+		selectCardGroups.forEach(c => {
+			c.custom_fields_list = JSON.parse(c.custom_fields_list)
+		});
+		selectCardGroups.forEach(c=> {
+			c.custom_fields_list.forEach(x => {
+				x.value = {"value":''};
+			})
+		})
+		res.status(200).json({
+			selectPipe,
+			selectCardGroups,
+			selectUser
+		})
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+});
+
+// router.put('/api/update/lead/:id', async function(req, res){
+// 	var id = req.params.id;
+// 	try{
+// 		var updateLead = await con.query(`UPDATE 
+// 											leads 
+// 										SET
+// 											`)
+// 		res.status(200).send();
+// 	}catch(e){
+// 		console.log(e);
+// 		res.status(500).send(e);
+// 	}
+// })
+
+// router.post('/api/insert/newlead', async function(req, res){
+// 	try{
+// 		var insertLead = await con.query(`INSERT INTO
+// 											leads (name, budget, resp_user_id, created_at, updated_at, group_id, status, pipeline_id)`)
+// 		res.status(200).send();
+// 	}catch(e){
+// 		console.log(e);
+// 		res.status(500).send(e);
+// 	}
+// })
+
 //select all leads
 router.get('/api/select/all', async function(req, res){
 	try{
@@ -449,8 +554,8 @@ router.get('/api/select/all', async function(req, res){
 											S.id step_id,
 											S.name step_name,
 											S.position step_position,
-											cl.id color_id,
-											cl.name color_name
+											CL.id color_id,
+											CL.name color_name
 										FROM 
 											leads L
 										LEFT JOIN 
@@ -507,6 +612,7 @@ router.get('/api/select/all', async function(req, res){
 	}
 });
 
+//select all custom fields
 router.get('/api/select/custom_fields', async function(req, res){
 	try{
 		var select = await con.query(`SELECT
@@ -521,6 +627,7 @@ router.get('/api/select/custom_fields', async function(req, res){
 	}
 });
 
+//fast insert
 router.post('/api/insert/fast', async function(req, res){
 	try{
 		var lead_contact = req.body.lead_contact;
@@ -559,14 +666,62 @@ router.post('/api/insert/fast', async function(req, res){
 			 								VALUES(?, 59, ?)`, [lead_email, insertContact])
 		}
 		res.status(200).json({
-							insertLead,
-							insertContact,
-							insertPhone,
-							insertEmail
-						});
+			insertLead,
+			insertContact,
+			insertPhone,
+			insertEmail
+		});
 	}catch(e){
 		console.log(e)
 		res.status(500).send(e);
+	}
+});
+
+//select tasks
+router.get('/api/select/task', async function (req, res) {
+	try{
+		var select = await con.query(`SELECT
+										t.id task_id,
+										t.comment text,
+										t.created_at created_at,
+										t.updated_at updated_at,
+										t.complete_till complete_till,
+										u.name user_name,
+										t.resp_user_id resp_user_id,
+										JSON_ARRAYAGG(JSON_OBJECT('lead_id', l.id, 'lead_name', l.name, 'company_name', lcom.name, 'contact_name', c.name)) leads
+									FROM 
+										task t 
+									LEFT JOIN 
+										leads l 
+									ON
+										l.amo_id = t.element_id
+									LEFT JOIN
+										leads_company lcom
+									ON
+										l.leads_company_id = lcom.id
+									LEFT JOIN 
+										contacts c
+									ON
+										c.id = l.main_contact_id
+									LEFT JOIN 
+										users u 
+									ON
+										u.id = t.resp_user_id
+									WHERE 
+										t.is_completed = 0
+									GROUP BY
+										t.id
+									ORDER BY 
+										t.created_at DESC`)
+		select.forEach(x => {
+			x.leads = JSON.parse(x.leads)
+		})
+		res.status(200).json({
+								select
+							})
+	}catch(e){
+		console.log(e);
+		res.status(500).send();
 	}
 });
 

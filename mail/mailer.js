@@ -20,9 +20,11 @@ var router = express.Router();
 
 //add new mail address
 router.post('/add', async function(req, res){
-	var data = req.body;
 	try{
-		var insert = await query.insert({table: 'mail', data: data});
+		var insert = await con.query(`INSERT INTO 
+										mail (user_id, email, password, imap_host, imap_port, smtp_host, smtp_port)
+									VALUES(?, ?, ?, ?, ?, ?, ?)`, 	[req.body.usert_id, req.body.password, req.body.imap_port
+																	 req.body.imap_host, req.body.smtp_host, req.body.smtp_port]);
 		res.status(200).send(insert);
 	} catch(e){
 		console.log(e.message);
