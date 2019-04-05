@@ -23,7 +23,7 @@ router.post('/add', async function(req, res){
 	try{
 		var insert = await con.query(`INSERT INTO 
 										mail (user_id, email, password, imap_host, imap_port, smtp_host, smtp_port)
-									VALUES(?, ?, ?, ?, ?, ?, ?)`, 	[req.body.usert_id, req.body.password, req.body.imap_port
+									VALUES(?, ?, ?, ?, ?, ?, ?)`, 	[req.body.usert_id, req.body.password, req.body.imap_port,
 																	 req.body.imap_host, req.body.smtp_host, req.body.smtp_port]);
 		res.status(200).send(insert);
 	} catch(e){

@@ -11,6 +11,7 @@ var regRouter = require('./controller/registration');
 var axios = require('./axios/axios');
 var mail = require('./mail/mailer');
 var excel = require('./controller/excel');
+var word = require('./controller/word');
 
 var app = express();
 
@@ -38,6 +39,7 @@ app.use('/users', usersRouter);
 app.use('/axios', axios);
 app.use('/mail', mail);
 app.use('/excel', excel);
+app.use('/word', word);
 
 	
 // catch 404 and forward to error handler

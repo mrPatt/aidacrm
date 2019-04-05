@@ -7,10 +7,32 @@
 var app = require('../app');
 var debug = require('debug')('amocrm-back:server');
 var http = require('http');
+var cron = require('node-cron');
+var mysql = require('mysql');
+var con = mysql.createConnection(config.db);
+
+cron.schedule('00 00 20 * * *', async () => {
+    try{
+        await con.query(`DROP TABLE IF EXISTS docum`)
+        await con.query(`CREATE TABLE docum (
+                          id int(11) NOT NULL AUTO_INCREMENT,
+                          name varchar(50) DEFAULT NULL,
+                          PRIMARY KEY (id)
+                        )
+                        ENGINE = INNODB,
+                        AVG_ROW_LENGTH = 1092,
+                        CHARACTER SET utf8mb4,
+                        COLLATE utf8mb4_general_ci;`)
+    }catch(e){
+        console.log(e);
+    }
+});
 
 /**
  * Get port from environment and store in Express.
  */
+
+
 
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
