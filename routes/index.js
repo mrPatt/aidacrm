@@ -1,15 +1,15 @@
 var mysql = require('mysql');
+var util = require('util');
 var express = require('express');
-var Query = require('node-mysql-ejq');
 var config = require('../config/config');
 var con = mysql.createConnection(config.db);
 
-var query = new Query(con);
+con.query = util.promisify(con.query)
 
 var router = express.Router();
 
 //select all leads by pipeline or pipeline with step limit 20
-router.get('/api/select', async function(req, res){
+router.post('/api/select', async function(req, res){
 	var p_id = req.body.p_id;
 	var s_id = req.body.s_id;
 	var list = req.body.list;
@@ -678,6 +678,69 @@ router.get('/api/select/lead/:id', async function(req, res){
 	}
 });
 
+router.get('/api/list/contact', async function(req, res){
+	try{
+		var select = await con.query(`SELECT 
+										ANY_VALUE(c.id) AS contact_id,
+										ANY_VALUE(c.name) AS contact_name,
+										ANY_VALUE(lcom.id) AS company_id,
+										ANY_VALUE(lcom.name) AS company_name
+									FROM 
+										contacts c 
+									LEFT JOIN 
+										leads_company_contacts lcc 
+									ON 
+										lcc.contact_id = c.id
+									LEFT JOIN
+										leads_company lcom
+									ON 
+										lcom.id = lcc.leads_company_id
+									GROUP BY 
+										c.id
+									LIMIT 40`);
+		var selCount = await con.query(`SELECT COUNT(*) AS count 
+										FROM
+											contacts
+										WHERE 
+											is_deleted IS NULL
+										OR
+											is_deleted = 0`)
+		selCount = selCount[0].count;
+		res.status(200).json({
+			select,
+			selCount
+		})
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+});
+
+router.get('/api/list/company', async function(req, res){
+	try{
+		var select = await con.query(`SELECT 
+										id,
+										name
+									FROM
+										leads_company lc
+									LIMIT 40`);
+		var selCount = await con.query(`SELECT COUNT(*) AS count 
+										FROM
+											leads_company
+										WHERE 
+											is_deleted IS NULL
+										OR
+											is_deleted = 0`)
+		selCount = selCount[0].count;
+		res.status(200).json({
+			select,
+			selCount
+		})
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+});
 
 //create new card
 router.get('/api/select/newlead', async function(req, res){
@@ -784,7 +847,7 @@ router.put('/api/update/lead/:id', async function(req, res){
 						var updateLeadCF = await con.query(`UPDATE 
 																leads_value
 															SET
-																value = '${data.selectCardGroups[i].custom_fields_list[x].value.value}'
+																value = ${data.selectCardGroups[i].custom_fields_list[x].value.value}
 															WHERE 
 																leads_id = ${lead_id}
 															AND
@@ -831,7 +894,7 @@ router.put('/api/update/lead/:id', async function(req, res){
 						var updateContactCF = await con.query(`UPDATE 
 																	contacts_value
 																SET
-																	value = '${data.selectContactCF[i].custom_fields_list[x].value.value}'
+																	value = ${data.selectContactCF[i].custom_fields_list[x].value.value}
 																WHERE 
 																	contact_id = ${data.selectContact.contact_id}
 																AND
@@ -874,7 +937,7 @@ router.put('/api/update/lead/:id', async function(req, res){
 						var updateCompanyCF = await con.query(`UPDATE 
 																	leads_company_value
 																SET
-																	value = '${data.selectCompanyCF[i].custom_fields_list[x].value.value}'
+																	value = ${data.selectCompanyCF[i].custom_fields_list[x].value.value}
 																WHERE 
 																	leads_company_id = ${data.selectCompany.company_id}
 																AND

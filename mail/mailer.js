@@ -1,5 +1,7 @@
+var iconv = require('iconv-lite');
 var nodemailer = require('nodemailer');
-var iconv = require('iconv')
+var iconv = require('iconv');
+var util = require('util');
 var MailParser = require('mailparser').MailParser;
 var bcrypt = require('bcrypt-nodejs');
 var imaps = require('imap-simple');
@@ -10,11 +12,9 @@ var Imap = require('imap'),
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 var mysql = require('mysql');
 var express = require('express');
-var Query = require('node-mysql-ejq');
 var config = require('../config/config');
 var con = mysql.createConnection(config.db);
-
-var query = new Query(con);
+con.query = util.promisify(con.query)
 
 var router = express.Router();
 
@@ -24,7 +24,7 @@ router.post('/add', async function(req, res){
 		var insert = await con.query(`INSERT INTO 
 										mail (user_id, email, password, imap_host, imap_port, smtp_host, smtp_port)
 									VALUES(?, ?, ?, ?, ?, ?, ?)`, 	[req.body.usert_id, req.body.password, req.body.imap_port,
-																	 req.body.imap_host, req.body.smtp_host, req.body.smtp_port]);
+																	req.body.imap_host, req.body.smtp_host, req.body.smtp_port]);
 		res.status(200).send(insert);
 	} catch(e){
 		console.log(e.message);
@@ -44,29 +44,32 @@ router.post('/send', async function(req, res){
 					data.user_id = decoded.mail_id;
 				}
 			});*/
-		var select = await query.select({table: 'mail', where: {id: mail_id}})
+		var select = await con.query(`SELECT 
+										*
+									FROM 
+										mail
+									WHERE 
+										id = ${mail_id}`)
 		console.log(select)
-		for(var a=0; a<select.length; a++){
-
 			var transporter = nodemailer.createTransport({
-			host: select[a].smtp_host,
-			port: select[a].smtp_port,
+			host: select[0].smtp_host,
+			port: select[0].smtp_port,
 			secure: false,
 			auth: {
-				user: select[a].email,
-				pass: select[a].password
+				user: select[0].email,
+				pass: select[0].password
 			},
 			tls: {
     		// do not fail on invalid certs
-    		rejectUnauthorized: false
+    			rejectUnauthorized: false
     		}
     		});
 		
 			var mo = req.body;
-			console.log(mo)
-			var iData = {toloh: mo.to, subject: mo.subject, text: mo.text, mail_id: select[0].id};
-			console.log(iData)
-			var insertData = await query.insert({table: 'messages', data: iData});
+			console.log(mo);
+			var insertData = await con.query(`INSERT INTO 
+												messages(toloh, subject, text, mail_id)
+											VALUES(?, ?, ?, ?)`,[mo.to, mo.subject, mo.text, select[0].id]);
 
 				const mailOptions = {
   				from: `${select[0].email}`, // sender address
@@ -88,9 +91,7 @@ router.post('/send', async function(req, res){
 					console.log(info);
 				}
 			});
-		
-		}
-		res.send(select)
+		res.status(200).send(select)
 	} catch(e){
 		console.log(e.message);
 		res.status(500).send();
@@ -132,15 +133,20 @@ router.post('/refresh', async function(req, res){
 					data.user_id = decoded.mail_id;
 				}
 			});*/
-		var select = await query.select({table: 'mail', where: {id: mail_id}})
+		var select = await con.query(`SELECT 
+										*
+									FROM 
+										mail
+									WHERE 
+										id = ${mail_id}`)
 		console.log(select)
-		for (var a = 0; a < select.length; a++) {
+		
 
 		var imap = new Imap({
-			user: select[a].email,
-       		password: select[a].password,
-       		host: select[a].imap_host,
-       		port: select[a].imap_port,      	
+			user: select[0].email,
+       		password: select[0].password,
+       		host: select[0].imap_host,
+       		port: select[0].imap_port,      	
        		tls: true,
    			authTimeout: 3000		
 		});
@@ -189,16 +195,22 @@ router.post('/refresh', async function(req, res){
 					var name  = headers.get('from').value[0].name;
 					var date = new Date(headers.get('date')).valueOf();
 					try{
-						var select = await query.select({table: 'messages', where: {date: date}});
+						var select1 = await con.query(`SELECT 
+														date
+													FROM 
+														messages
+													WHERE 
+														date = ${date}`)
 						if(select.length == 0){
-							let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name, uid: uid}
-							console.log(iData)			 
-							var insert = await query.insert({table: 'messages', data: iData})	
+							var insert = await con.query(`INSERT INTO 
+															messages(mail_id, froms, tos, subject, date, name, uid)
+														VALUES(?, ?, ?, ?, ?, ?, ?)`, [mail_id, froms, tos, subj, date, name, uid])
 		  					ins = insert.insertId;
 							var data = await parser.on('data', async function(data) {
 								if (data.type === 'text'){
-			    					var iData1 = {text: apos(data.text), message_id: ins}
-			    					var insert1 = await query.insert({table: 'messages_text', data: iData1})	     					
+			    					var insertText = await con.query(`INSERT INTO
+			    														messages_text(text, message_id)
+			    													VALUES(?, ?)`, [apos(data.text, ins)])     					
 								}
 								return data
 							});		
@@ -229,7 +241,7 @@ router.post('/refresh', async function(req, res){
         			parser.end();
     			});
 			}
-		}
+		
 		res.send()
 	} catch(e){
 		console.log(e); 
@@ -249,9 +261,13 @@ router.post('/inbox', async function(req, res){
 					data.user_id = decoded.mail_id;
 				}
 			});*/
-		var select = await query.select({table: 'mail', where: {id: mail_id}})
+		var select = await con.query(`SELECT 
+										*
+									FROM 
+										mail
+									WHERE 
+										id = ${mail_id}`)
 		console.log(select)
-		for (var a = 0; a < select.length; a++) {
 
 		var imap = new Imap({
 			user: select[a].email,
@@ -303,16 +319,22 @@ router.post('/inbox', async function(req, res){
 					var date = new Date(headers.get('date')).valueOf();
 					try{
 						console.log('date', date)
-						var select = await query.select({table: 'messages', where: {date: date}});
+						var select1 = await con.query(`SELECT 
+														date
+													FROM 
+														messages
+													WHERE 
+														date = ${date}`)
 						if(select.length == 0){
-							let iData = {mail_id: mail_id, froms: froms, tos: tos, subject: subj, date: date, name: name, uid: uid}
-							console.log(iData)			 
-							var insert = await query.insert({table: 'messages', data: iData})	
+							var insert = await con.query(`INSERT INTO 
+															messages(mail_id, froms, tos, subject, date, name, uid)
+														VALUES(?, ?, ?, ?, ?, ?, ?)`, [mail_id, froms, tos, subj, date, name, uid])
 		  					ins = insert.insertId;
 							var data = await parser.on('data', async function(data) {
 								if (data.type === 'text'){
-			    					var iData1 = {text: apos(data.text), message_id: ins}
-			    					var insert1 = await query.insert({table: 'messages_text', data: iData1})	     					
+			    					var insertText = await con.query(`INSERT INTO
+			    														messages_text(text, message_id)
+			    													VALUES(?, ?)`, [apos(data.text, ins)])     					
 								}
 								return data
 							});		
@@ -342,7 +364,6 @@ router.post('/inbox', async function(req, res){
         			parser.end();
     			});
 			}
-		}
 		res.send()
 	} catch(e){
 		console.log(e); 
@@ -362,15 +383,19 @@ router.post('/attachments', async function(req, res){
 					data.user_id = decoded.mail_id;
 				}
 			});*/
-		var select = await query.select({table: 'mail', where: {id: mail_id}})
+		var select = await con.query(`SELECT 
+										*
+									FROM 
+										mail
+									WHERE 
+										id = ${mail_id}`)
 		console.log(select)
-		for(var a=0; a<select.length; a++){
 			var config = {
 				imap: {
-					user: select[a].email,
-       				password: select[a].password,
-        			host: select[a].imap_host,
-        			port: select[a].imap_port,
+					user: select[0].email,
+       				password: select[0].password,
+        			host: select[0].imap_host,
+        			port: select[0].imap_port,
         			tls: true,
         			authTimeout: 3000
 				}
@@ -427,9 +452,7 @@ router.post('/attachments', async function(req, res){
     	}).then(function (attachments) {
         	console.log(attachments);
    		});
-	})
-		
-	}
+	})	
 		res.send()
 	} catch(e){
 		res.send(e)

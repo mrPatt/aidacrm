@@ -1,12 +1,11 @@
 var axios = require('axios');
 var mysql = require('mysql');
+var util = require('util');
 var express = require('express');
-var Query = require('node-mysql-ejq');
 var config = require('../config/config');
 var cheerio = require('cherio');
 var con = mysql.createConnection(config.db);
-
-var query = new Query(con);
+con.query = util.promisify(con.query)
 
 var router = express.Router();
 
@@ -937,7 +936,9 @@ router.post('/amo', async function(req, res){
 	        												created_by = ${selectUserCompany[0].id},
 	        												amo_id = ${companyRow.id},
 	        												resp_user_id = ${selectRespUserCompany[0].user_id},
-	        												group_id = ${selectRespUserCompany[0].group_id}`)
+	        												group_id = ${selectRespUserCompany[0].group_id}
+	        											WHERE 
+	        												amo_id = ${companyRow.id}`)
 	            	for(var i = 0; i < companyRow.custom_fields.length; i++){
 	            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
 		            		if(selectCompanyCF == 0){
@@ -1060,7 +1061,7 @@ router.post('/amo', async function(req, res){
             															leads_company_id)
             											VALUES(?, ?)`, [selectContact[0].id,
             															insertCompany.insertId]);
-            	console.log(`insertLeadsContacts----------------`, updateLeadsCompanyContacts)
+            	console.log(`updateLeadsCompanyContacts----------------`, updateLeadsCompanyContacts)
             }  
         }else if(req.body['leads[status][0][old_status_id]']){
         	var result = await axios.get(`https://azim.amocrm.ru/api/v2/leads?id=${req.body['leads[status][0][id]']}`,{
@@ -1355,14 +1356,14 @@ router.post('/amo', async function(req, res){
             											WHERE 
             												leads_id = ${selectLead[0].id}`)
             		for(var i = 0; i < row.custom_fields.length; i++){
-            			for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-		            		var selectCF = await con.query(`SELECT 
+            			var selectCF = await con.query(`SELECT 
 		            											id,
 		            											name
 			            									FROM
 			            										custom_fields
 			            									WHERE 
 			            										name = '${row.custom_fields[i].name}'`);
+            			for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
 		            		if(selectLeadsValue){
 		            			var updateCF = await con.query(`UPDATE
 			            											leads_value 
