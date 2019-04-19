@@ -4,9 +4,10 @@ var util = require('util');
 var express = require('express');
 var config = require('../config/config');
 var cheerio = require('cherio');
+var Query = require('node-mysql-ejq');
 var con = mysql.createConnection(config.db);
-con.query = util.promisify(con.query)
-
+//con.query = util.promisify(con.query)
+var query = new Query(con);
 var router = express.Router();
 
 var token = '';
@@ -26,6 +27,116 @@ function apos(a){
 		return a;
 	}
 }
+
+router.get('/lc', async function(req, res){
+	var a = 1;
+	try{
+		for(var f=0; f<36; f++){
+			await setTimeout(function(){console.log(a)}, 1000);
+			
+			var axi = await axios('https://azim.amocrm.ru/private/api/auth.php?type=json', {
+				method: 'post',
+				withCredentials: true,
+				data: {
+					USER_LOGIN: 'sd@aziaimport.kz',
+					USER_HASH: '8d287fef2df5800f515f0261353a4a8c'
+				}
+			});
+
+			if(axi.data.response.auth){
+				token = axi.headers['set-cookie'][0].split(' ')[0].split('=')[1].split(';')[0]
+				console.log(token)
+				res.send()
+			} else {
+				res.status(401).send()
+			}
+			var contactRow = await axios(`https://azim.amocrm.ru/api/v2/leads?limit_rows=500&limit_offset=${a}`, {
+				method: 'get',
+				headers: {
+					Cookie: `session_id=${token}`
+				},
+				withCredentials: true
+			});
+			var data = contactRow.data._embedded.items;
+			for(var i = 0; i < data.length; i++){
+				if(typeof data[i].contacts.id != 'undefined'){
+					for (var j = 0; j < data[i].contacts.id.length; j++) {
+						if(typeof data[i].contacts.id[j] != 'undefined'){
+							var selectContact = await query.select({table: 'contacts', where: {amo_id: `${data[i].contacts.id[j]}`}});
+							var selectLeads = await query.select({table: 'leads', where: {amo_id: `${data[i].id}`}});
+							console.log(selectContact);
+							if(selectContact == 0){
+								selectContact = {}
+							} else {
+								var iContact = {contact_id: selectContact[0].id, leads_id: selectLeads[0].id};
+								var insertContact = await query.insert({table: 'leads_contacts', data: iContact});
+								console.log(iContact)
+							}
+						}
+					}
+				}
+			}
+			a = a + 500;
+		}
+		res.status(200).send();
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+})
+
+router.get('/lcc', async function(req, res){
+	var a = 1;
+	try{
+		for(var f=0; f<36; f++){
+			await setTimeout(function(){console.log(a)}, 1000);
+			
+			var axi = await axios('https://azim.amocrm.ru/private/api/auth.php?type=json', {
+				method: 'post',
+				withCredentials: true,
+				data: {
+					USER_LOGIN: 'sd@aziaimport.kz',
+					USER_HASH: '8d287fef2df5800f515f0261353a4a8c'
+				}
+			});
+
+			if(axi.data.response.auth){
+				token = axi.headers['set-cookie'][0].split(' ')[0].split('=')[1].split(';')[0]
+				console.log(token)
+				res.send()
+			} else {
+				res.status(401).send()
+			}
+			var contactRow = await axios(`https://azim.amocrm.ru/api/v2/contacts?limit_rows=500&limit_offset=${a}`, {
+				method: 'get',
+				headers: {
+					Cookie: `session_id=${token}`
+				},
+				withCredentials: true
+			});
+			var data = contactRow.data._embedded.items;
+			for(var i = 0; i < data.length; i++){
+				if(typeof data[i].company.id != 'undefined'){
+					var selectContact = await query.select({table: 'contacts', where: {amo_id: `${data[i].id}`}});
+					var selectLeadsCom = await query.select({table: 'leads_company', where: {amo_id: `${data[i].company.id}`}});
+					console.log(selectContact);
+					if(selectContact == 0){
+						selectContact = {}
+					} else {
+						var iContact = {contact_id: selectContact[0].id, leads_company_id: selectLeadsCom[0].id};
+						var insertContact = await query.insert({table: 'leads_company_contacts', data: iContact});
+						console.log(iContact)
+					}
+				}	
+			}
+			a = a + 500;
+		}
+		res.status(200).send();
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+})
 
 router.post('/users', async function(req, res){
 	try{
@@ -58,7 +169,7 @@ router.post('/users', async function(req, res){
 
 router.post('/contacts', async function(req, res){
 	
-	var a = 10000;
+	var a = 1;
 	try{
 		for(var f=0; f<36; f++){
 			await setTimeout(function(){console.log(a)}, 1000);
@@ -394,7 +505,7 @@ router.post('/leads', async function(req, res){
 								 closed_at: closed_at, created_by: insertUser.insertId,
 								 resp_user_id: insertResp.insertId, group_id: selectGroup[0].id, amo_id: data[i].id, 
 								 status: selectStep[0].id, pipeline_id: selectPipe[0].id, main_contact_id: insertMC.insertId,
-								 leads_company_id: insertLC.insertId};
+								 leads_company_id: insertLC.insertId, budget: data[i].sale, is_deleted: data[i].is_deleted};
 					console.log(iData) 
 					var updateLeads = await query.update({table: 'leads', where: {amo_id: data[i].id}, data: iData});
 					selectLeads = selectLeads[0];
@@ -730,7 +841,7 @@ router.post('/amo', async function(req, res){
             									step
             								WHERE 
             									amo_id = ${row.status_id}`);
-            var selectContact = {};
+            var selectContact = [];
             if(row.main_contact.id){
             	selectContact = await con.query(`SELECT 
             										id
@@ -740,7 +851,7 @@ router.post('/amo', async function(req, res){
             										amo_id = ${row.main_contact.id}`)
             }
 
-            var selectCompany = {};
+            var selectCompany = [];
             if(row.company.id){
             	selectCompany = await con.query(`SELECT 
             										id
@@ -749,8 +860,7 @@ router.post('/amo', async function(req, res){
             									WHERE 
             										amo_id = ${row.company.id}`)
             }
-            var insertContact = {};
-            var selectContactCF = {};
+            
             if(row.main_contact.id){
             	
 	            var contact = await axios.get(`https://azim.amocrm.ru/api/v2/contacts?id=${row.main_contact.id}`,{
@@ -760,6 +870,7 @@ router.post('/amo', async function(req, res){
 						withCredentials: true
 	            	});
 	            var contactRow = contact.data._embedded.items[0];
+	            var insertContact = {};
 	            var selectRespUserContact = await con.query(`SELECT 
 			            									ANY_VALUE(u.id) AS user_id,
 			            									ANY_VALUE(ug.id) AS group_id
@@ -781,7 +892,7 @@ router.post('/amo', async function(req, res){
 		            									users 
 		            								WHERE
 		            									amo_id = ${contactRow.created_by}`);
-	            if(selectContact == 0){
+	            if(selectContact.length == 0){
 	            	insertContact = await con.query(`INSERT INTO
 	            											contacts (name, 
 		            												created_at, 
@@ -799,7 +910,7 @@ router.post('/amo', async function(req, res){
 		            																	selectRespUserContact[0].group_id]);
 	            	for(var i = 0; i < contactRow.custom_fields.length; i++){
 	            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-	            			selectContactCF = await con.query(`SELECT 
+	            			var selectContactCF = await con.query(`SELECT 
 			            											id,
 			            											name
 				            									FROM
@@ -830,8 +941,26 @@ router.post('/amo', async function(req, res){
 														WHERE 
 															amo_id = ${contactRow.id}`);
 	            	for(var i = 0; i < contactRow.custom_fields.length; i++){
+	            		var selectContactCF = await con.query(`SELECT 
+			            											id,
+			            											name
+				            									FROM
+				            										custom_fields
+				            									WHERE 
+				            										name = '${contactRow.custom_fields[i].name}'`);
 	            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-		            		if(selectContactCF == 0){
+	            			var selectContactValue = await con.query(`SELECT
+	            														id,
+	            														field_id,
+            															value,
+            															contact_id
+            														FROM 
+            															contacts_value
+            														WHERE 
+            															contact_id = ${selectContact[0].id}
+            														AND
+            															value = '${contactRow.custom_fields[i].values[k].value}'`)
+		            		if(selectContactValue.length == 0){
 		            			console.log('selectContactCFselectContactCFselectContactCF',selectContactCF)
 		            			var insertContactCF = await con.query(`INSERT INTO 
 					            											contacts_value (field_id,
@@ -840,7 +969,7 @@ router.post('/amo', async function(req, res){
 					            										VALUES (?, ?, ?)`, [selectContactCF[0].id,
 					            															contactRow.custom_fields[i].values[k].value,
 					            															insertContact.insertId])
-		            		}else if(selectContactCF == 'undefined'){
+		            		}else if(selectContactCF.length == 0){
 		            			console.log('asdf')
 		            		}else{
 		            			console.log('selectContactCFselectContactCFselectContactCF',selectContactCF)
@@ -849,9 +978,9 @@ router.post('/amo', async function(req, res){
 			            										SET 
 			            											field_id = ${selectContactCF[0].id},
 																	value = ${contactRow.custom_fields[i].values[k].value},
-																	contact_id = ${selectContact.id}
+																	contact_id = ${selectContact[0].id}
 																WHERE 
-																	contact_id = ${selectContact.id}`)
+																	contact_id = ${selectContact[0].id}`)
 		            		}
 		            		
 		            	}
@@ -891,7 +1020,7 @@ router.post('/amo', async function(req, res){
 	            								WHERE
 	            									amo_id = ${companyRow.created_by}`);
 	        	
-	            if(selectCompany == 0){
+	            if(selectCompany.length == 0){
 	            	insertCompany = await con.query(`INSERT INTO
 	        											leads_company (name, 
 		            												created_at, 
@@ -990,29 +1119,31 @@ router.post('/amo', async function(req, res){
             																					row.id,
             																					selectStep[0].id,
             																					selectPipe[0].id,
-            																					insertContact.insertId ? insertContact.insertId : null,
-            																					insertCompany.insertId ? insertCompany.insertId : null,
+            																					insertContact && insertContact.insertId ? insertContact.insertId : null,
+            																					insertContact && insertCompany.insertId ? insertCompany.insertId : null,
             																					row.is_deleted])
             console.log(`insertLead----------------`, insertLead)
             for(var i = 0; i < row.custom_fields.length; i++){
-            	for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-            		var selectCF = await con.query(`SELECT 
-            											id,
-            											name
-	            									FROM
-	            										custom_fields
-	            									WHERE 
-	            										name = '${row.custom_fields[i].name}'`);
-            		var insertCF = await con.query(`INSERT INTO 
-            											leads_value (field_id,
-            														value,
-            														leads_id)
-            										VALUES (?, ?, ?)`, [selectCF[0].id,
-            															row.custom_fields[i].values[k].value,
-            															insertLead.insertId])
+            	if(contactRow.custom_fields.length !== 0){
+	            	for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
+	            		var selectCF = await con.query(`SELECT 
+	            											id,
+	            											name
+		            									FROM
+		            										custom_fields
+		            									WHERE 
+		            										name = '${row.custom_fields[i].name}'`);
+	            		var insertCF = await con.query(`INSERT INTO 
+	            											leads_value (field_id,
+	            														value,
+	            														leads_id)
+	            										VALUES (?, ?, ?)`, [selectCF[0].id,
+	            															row.custom_fields[i].values[k].value,
+	            															insertLead.insertId])
+	            	}
             	}
             }
-            if(selectContact == 0){
+            if(selectContact.length == 0 || insertContact !== 0){
             	var insertLeadsContacts = {};
             	if(typeof row.contacts.id !== 'undefined'){
 					for (var j = 0; j < row.contacts.id.length; j++) {
@@ -1048,7 +1179,7 @@ router.post('/amo', async function(req, res){
 				}
             	console.log(`insertLeadsContacts----------------`, updateLeadsContacts)
             }
-            if(selectCompany == 0){
+            if(selectCompany.length == 0 && insertContact !== 0 && insertCompany !== 0){
             	var insertLeadsCompanyContacts = await con.query(`INSERT INTO
             											leads_company_contacts (contact_id,
             																	leads_company_id)
@@ -1057,9 +1188,9 @@ router.post('/amo', async function(req, res){
            		console.log(`insertLeadsCompanyContacts----------------`, insertLeadsCompanyContacts)
             }else{
             	var updateLeadsCompanyContacts = await con.query(`INSERT INTO
-            											leads_contacts (contact_id,
+            											leads_company_contacts (contact_id,
             															leads_company_id)
-            											VALUES(?, ?)`, [selectContact[0].id,
+            											VALUES(?, ?)`, [selectCompany[0].id,
             															insertCompany.insertId]);
             	console.log(`updateLeadsCompanyContacts----------------`, updateLeadsCompanyContacts)
             }  
@@ -1165,7 +1296,7 @@ router.post('/amo', async function(req, res){
 			            									users 
 			            								WHERE
 			            									amo_id = ${contactRow.created_by}`);
-	            if(selectContact == 0){
+	            if(selectContact.length == 0){
 	            	insertContact = await con.query(`INSERT INTO
             											contacts (name, 
 	            												created_at, 
@@ -1209,14 +1340,26 @@ router.post('/amo', async function(req, res){
 															amo_id = ${contactRow.id}`);
 	            	for(var i = 0; i < contactRow.custom_fields.length; i++){
 	            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-		            		var updateCF = await con.query(`UPDATE 
-		            											contacts_value
-		            										SET 
-		            											field_id = ${selectContactCF[0].id},
-																value = '${contactRow.custom_fields[i].values[k].value}',
-																contact_id = ${selectContact[0].id}
-															WHERE 
-																contact_id = ${selectContact[0].id}`)
+	            			var selectContactValue = await con.query(`SELECT 
+	            														id,
+	            														value,
+	            														field_id
+	            													FROM
+	            														contacts_value
+	            													WHERE
+	            														contact_id = ${selectContact[0].id}`)
+	            			if(selectContactValue.length){
+			            		var updateCF = await con.query(`UPDATE 
+			            											contacts_value
+			            										SET 
+			            											field_id = ${selectContactCF[0].id},
+																	value = '${contactRow.custom_fields[i].values[k].value}',
+																	contact_id = ${selectContact[0].id}
+																WHERE 
+																	contact_id = ${selectContact[0].id}
+																AND 
+																	id = ${selectContactValue[0].id}`)
+	            			}
 		            	}
 	            	}
 	            }
@@ -1260,7 +1403,7 @@ router.post('/amo', async function(req, res){
 			            									users 
 			            								WHERE
 			            									amo_id = ${companyRow.created_by}`);
-	            if(selectCompany == 0){
+	            if(selectCompany.length == 0){
 	            	insertCompany = await con.query(`INSERT INTO
 	        											leads_company (name, 
 		            												created_at, 
@@ -1276,9 +1419,8 @@ router.post('/amo', async function(req, res){
 	            																	companyRow.id,
 	            																	selectRespUserCompany[0].user_id,
 	            																	selectRespUserCompany[0].group_id]);
-	            	console.log(`insertCompany----------------`, insertCompany)
 	            	for(var i = 0; i < companyRow.custom_fields.length; i++){
-	            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
+	            		for(var k = 0; k < companyRow.custom_fields[i].values.length; k++){
 		            		var insertCompanyCF = await con.query(`INSERT INTO 
 				            											leads_company_value (field_id,
 				            															value,
@@ -1291,6 +1433,14 @@ router.post('/amo', async function(req, res){
 	            }else if(selectCompany == 'undefined'){
 	            	console.log('asdf')
 	            }else{
+	            	var selectCompanyValue = await con.query(`SELECT 
+	            												id,
+	            												value,
+	            												field_id
+	            											FROM
+	            												leads_company_value
+	            											WHERE
+	            												leads_company_id = ${selectCompany[0].id}`)
 	            	var updateCompany = await con.query(`UPDATE 
 	            											leads_company 
 	            										SET 
@@ -1302,32 +1452,39 @@ router.post('/amo', async function(req, res){
 	        												resp_user_id = ${selectRespUserCompany[0].user_id},
 	        												group_id = ${selectRespUserCompany[0].group_id}
 	        											WHERE 
-	        												amo_id = ${companyRow.id}`)
-	            	console.log('updateCompany---------------------',updateCompany)
+	        												id = ${selectCompany[0].id}`)
 	            	for(var i = 0; i < companyRow.custom_fields.length; i++){
-	            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-		            		var updateCompanyCF = await con.query(`UPDATE 
-		            											leads_company_value
-		            										SET 
-		            											field_id = ${selectCompanyCF[0].id},
-																value = '${companyRow.custom_fields[i].values[k].value}',
-																leads_company_id = ${selectCompany[0].id}
-															WHERE 
-																leads_company_id = ${selectCompany[0].id}`)
+	            		for(var k = 0; k < companyRow.custom_fields[i].values.length; k++){
+	            			if(selectCompanyValue.length !== 0){
+			            		var updateCompanyCF = await con.query(`UPDATE 
+			            											leads_company_value
+			            										SET 
+			            											field_id = ${selectCompanyCF[0].id},
+																	value = '${companyRow.custom_fields[i].values[k].value}',
+																	leads_company_id = ${selectCompany[0].id}
+																WHERE 
+																	leads_company_id = ${selectCompany[0].id}
+																AND 
+																	id = ${selectCompanyValue[0].id}`)
+	            			}else{
+	            				var insertCompanyCF = await con.query(`INSERT INTO 
+	            														leads_company_value(field_id, value, leads_company_id)
+	            													VALUES(?, ?, ?)`, [selectCompanyCF[0].id, 
+	            																		companyRow.custom_fields[i].values[k].value,
+	            																		selectCompany[0].id])
+	            			}
 		            	}
 	            	}
 	            }
             }
-            
             var selectLead = await con.query(`SELECT 
             									id
             								FROM 
             									leads
             								WHERE 
             									amo_id = ${row.id}`);
-            console.log('selectLeadselectLeadselectLeadselectLeadselectLeadselectLead',selectLead)
-            var selectLeadsValue = {};
-            if(selectLead !==0 && selectLead !=='undefined'){
+            console.log('selectLead',selectLead)
+            if(selectLead.length !== 0){
             	var updateLead = await con.query(`UPDATE 
             										leads 
             									SET 
@@ -1341,46 +1498,47 @@ router.post('/amo', async function(req, res){
             										amo_id = ${row.id},
             										status = ${selectStep[0].id},
             										pipeline_id = ${selectPipe[0].id},
-            										main_contact_id = ${insertContact.insertId ? insertContact.insertId : null},
-            										leads_company_id = ${insertCompany.insertId ? insertCompany.insertId : null},
+            										main_contact_id = ${insertContact.insertId ? (insertContact.insertId ? insertContact.insertId : null) : (selectContact[0].id ? selectContact[0].id : null)},
+            										leads_company_id = ${insertCompany.insertId ? (insertCompany.insertId ? insertCompany.insertId : null) : (selectCompany[0].id ? selectCompany[0].id : null)},
             										is_deleted = ${row.is_deleted}
             									WHERE 
             										amo_id = ${row.id}`)
-            	if(selectLead[0]){
-            		selectLeadsValue = await con.query(`SELECT 
-            												id,
-            												value,
-            												field_id
-            											FROM
-            												leads_value
-            											WHERE 
-            												leads_id = ${selectLead[0].id}`)
-            		for(var i = 0; i < row.custom_fields.length; i++){
-            			var selectCF = await con.query(`SELECT 
-		            											id,
-		            											name
-			            									FROM
-			            										custom_fields
-			            									WHERE 
-			            										name = '${row.custom_fields[i].name}'`);
-            			for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
-		            		if(selectLeadsValue){
-		            			var updateCF = await con.query(`UPDATE
-			            											leads_value 
-			            										SET 
-			            											field_id = ${selectCF[0].id},
-			            											value = '${row.custom_fields[i].values[k].value}',
-			            											leads_id = ${selectLead[0].id}
-			            										WHERE 
-			            											leads_id = ${selectLead[0].id}`)
-		            		}else{
-		            			var insertCF = await con.query(`INSERT INTO 
+            	if(selectLead[0].id){
+            		var selectLeadsValue = await con.query(`SELECT 
+	            												id,
+	            												value,
+	            												field_id
+	            											FROM
+	            												leads_value
+	            											WHERE 
+	            												leads_id = ${selectLead[0].id}`)
+            		for(let i = 0; i < row.custom_fields.length; i++){
+            			for(let k = 0; k < row.custom_fields[i].values.length; k++){
+	            			let selectCF = await con.query(`SELECT 
+			            											id,
+			            											name
+				            									FROM
+				            										custom_fields
+				            									WHERE 
+				            										name = '${row.custom_fields[i].name}'`);
+            			
+		            		if(selectLeadsValue.length == 0){
+		            			let insertCF = await con.query(`INSERT INTO 
 			            											leads_value (field_id,
 			            														value,
 			            														leads_id)
 			            										VALUES (?, ?, ?)`, [selectCF[0].id,
 			            															row.custom_fields[i].values[k].value,
 			            															selectLead[0].id])
+		            		}else{
+		            			let updateCF = await con.query(`UPDATE
+			            											leads_value 
+			            										SET 
+			            											field_id = ${selectCF[0].id},
+			            											value = '${row.custom_fields[i].values[k].value}',
+			            											leads_id = ${selectLead[0].id}
+			            										WHERE 
+			            											id = ${selectLeadsValue[0].id}`);
 		            		}
 	            		}
 	            	}
@@ -1419,7 +1577,7 @@ router.post('/amo', async function(req, res){
             																					row.is_deleted])
             	console.log(`insertLead----------------`, insertLead)
             	for(var i = 0; i < row.custom_fields.length; i++){
-            		for(var k = 0; k < contactRow.custom_fields[i].values.length; k++){
+            		for(var k = 0; k < row.custom_fields[i].values.length; k++){
 	            		var selectCF = await con.query(`SELECT 
 	            											id,
 	            											name

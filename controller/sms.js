@@ -13,6 +13,7 @@ var router = express.Router();
 router.post('/send1', async function(req, res){
 	var text = '';
 	var phone = '';
+	var name = '';
 	try{
 		var axi = await axios('https://azim.amocrm.ru/private/api/auth.php?type=json', {
 			method: 'post',
@@ -24,7 +25,6 @@ router.post('/send1', async function(req, res){
 		});
 		if(axi.data.response.auth){
 			token = axi.headers['set-cookie'][0].split(' ')[0].split('=')[1].split(';')[0]
-			console.log(token)
 			res.send()
 		} else {
 			res.status(401).send()
@@ -53,11 +53,14 @@ router.post('/send1', async function(req, res){
 		            			phone = contactRow.custom_fields[i].values[j].value;
 
 	            			}
+	            			if(contactRow.custom_fields[i].id == 208221){
+	            				name = contactRow.custom_fields[i].values[j].value;
+	            			}
 	            		}
 	            	}
 	            }
 	        }
-	        text = `Здравствуйте ${contactRow.name}! Произведена оплата поставщику ${row.name}. С уважением AZIA IMPORT.`;
+	        text = `Здравствуйте ${contactRow.name}! Произведена оплата поставщику ${name}. С уважением AZIA IMPORT.`;
         }else if(req.body['leads[status][0][old_status_id]']){
         	var result = await axios.get(`https://azim.amocrm.ru/api/v2/leads?id=${req.body['leads[status][0][id]']}`,{
 				headers: {
@@ -78,13 +81,16 @@ router.post('/send1', async function(req, res){
             		for(var j = 0; j < contactRow.custom_fields[i].values.length; j++){
             			if(contactRow.custom_fields[i].values[j]){
 		            		if(contactRow.custom_fields[i].id == 2082){
-		            			var phone = contactRow.custom_fields[i].values[j].value;
+		            			phone = contactRow.custom_fields[i].values[j].value;
+	            			}
+	            			if(contactRow.custom_fields[i].id == 208221){
+	            				name = contactRow.custom_fields[i].values[j].value;
 	            			}
 	            		}
 	            	}
 	            }
 	        }
-	        text = `Здравствуйте ${contactRow.name}! Произведена оплата поставщику ${row.name}. С уважением AZIA IMPORT.`;
+	        text = `Здравствуйте ${contactRow.name}! Произведена оплата поставщику ${name}. С уважением AZIA IMPORT.`;
 	        text = urlencode(text)
 	        
         }
@@ -92,7 +98,6 @@ router.post('/send1', async function(req, res){
 				method: 'post',
 				withCredentials: true
             });
-		console.log(sender)
 		res.status(200).send();
 	}catch(e){
 		console.log(e);
@@ -114,7 +119,6 @@ router.post('/send2', async function(req, res){
 		});
 		if(axi.data.response.auth){
 			token = axi.headers['set-cookie'][0].split(' ')[0].split('=')[1].split(';')[0]
-			console.log(token)
 			res.send()
 		} else {
 			res.status(401).send()
@@ -141,13 +145,12 @@ router.post('/send2', async function(req, res){
 	            		for(var j = 0; i < contactRow.custom_fields[i].values.length; j++){
 		            		if(contactRow.custom_fields[i].id == 2082){
 		            			phone = contactRow.custom_fields[i].values[j].value;
-
 	            			}
 	            		}
 	            	}
 	            }
 	        }
-	        text = `Здравствуйте ${contactRow.name}! Произведена оплата поставщику ${row.name}. С уважением AZIA IMPORT.`;
+	        text = `Здравствуйте, ${contactRow.name}! Ваш платеж принят и прошел в реестр. С уважением AZIA IMPORT.`;
         }else if(req.body['leads[status][0][old_status_id]']){
         	var result = await axios.get(`https://azim.amocrm.ru/api/v2/leads?id=${req.body['leads[status][0][id]']}`,{
 				headers: {
@@ -182,7 +185,6 @@ router.post('/send2', async function(req, res){
 				method: 'post',
 				withCredentials: true
             });
-		console.log(sender)
 		res.status(200).send();
 	}catch(e){
 		console.log(e);

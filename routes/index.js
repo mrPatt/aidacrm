@@ -2,7 +2,10 @@ var mysql = require('mysql');
 var util = require('util');
 var express = require('express');
 var config = require('../config/config');
+var {mid} = require('../controller/auth');
 var con = mysql.createConnection(config.db);
+var Query = require('node-mysql-ejq');
+var query = new Query(con);
 
 con.query = util.promisify(con.query)
 
@@ -57,10 +60,8 @@ router.post('/api/select', async function(req, res){
 										ON 
 											S.color_id = CL.id 
 										WHERE 
-											P.id = ${p_id} 
+											P.id = ${p_id}
 										AND 
-											L.is_deleted IS NULL 
-										OR 
 											L.is_deleted = 0
 										ORDER BY 
 											L.updated_at DESC 
@@ -69,19 +70,15 @@ router.post('/api/select', async function(req, res){
 											FROM 
 												leads 
 											WHERE 
-												pipeline_id = ${p_id} 
-											AND 
-												is_deleted IS NULL 
-											OR
+												pipeline_id = ${p_id}
+											AND
 												is_deleted = 0`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget 
 											FROM 
 												leads 
 											WHERE 
-												pipeline_id = ${p_id} 
-											AND 
-												is_deleted IS NULL 
-											OR
+												pipeline_id = ${p_id}
+											AND
 												is_deleted = 0`)
 			selCount = selCount[0].count;
 			selSumm = selSumm[0].sumBudget;
@@ -151,8 +148,6 @@ router.post('/api/select', async function(req, res){
 												AND
 													status = ${s_id}
 												AND
-													L.is_deleted IS NULL 
-												OR 
 													L.is_deleted = 0
 												ORDER BY 
 													L.updated_at DESC 
@@ -166,8 +161,6 @@ router.post('/api/select', async function(req, res){
 												AND 
 													status = ${s_id}
 												AND 
-													is_deleted IS NULL 
-												OR 
 													is_deleted = 0`)
 				var selSumm = await con.query(`SELECT SUM(budget) sumBudget 	
 												FROM 
@@ -177,8 +170,6 @@ router.post('/api/select', async function(req, res){
 												AND 
 													status = ${s_id}
 												AND 
-													is_deleted IS NULL 
-												OR 
 													is_deleted = 0`)
 				selectStep[i].leads = selectLead;
 				selectStep[i].selCount = selCount[0].count;
@@ -248,10 +239,8 @@ router.post('/api/select', async function(req, res){
 											WHERE 	
 												pipeline_id = ${p_id} 
 											AND 
-												status = ${s_id}
+												status = ${s_id} 
 											AND 
-												is_deleted IS NULL 
-											OR 
 												is_deleted = 0`)
 			var selSumm = await con.query(`SELECT SUM(budget) sumBudget 	
 											FROM 
@@ -259,10 +248,8 @@ router.post('/api/select', async function(req, res){
 											WHERE 
 												pipeline_id = ${p_id} 
 											AND 
-												status = ${s_id}
+												status = ${s_id} 
 											AND 
-												is_deleted IS NULL 
-											OR 
 												is_deleted = 0`)
 			selCount = selCount[0].count;
 			selSumm = selSumm[0].sumBudget;
@@ -413,7 +400,10 @@ router.get('/api/select/lead/:id', async function(req, res){
 										 	l.leads_company_id leads_company_id,
 										 	cl.id color_id,
 											cl.name color_name,
-										 	JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 'name', cf.name, 'value_id', lv.id, 'value', lv.value)) custom_fields
+										 	JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 
+										 							  'name', cf.name, 
+										 							  'value_id', lv.id, 
+										 							  'value', lv.value)) custom_fields
 										FROM 
 											leads l
 										LEFT JOIN
@@ -432,6 +422,10 @@ router.get('/api/select/lead/:id', async function(req, res){
 										  	custom_fields cf
 										ON
 										  	cf.id = lv.field_id
+										LEFT JOIN 
+											field_type ft 
+										ON 
+											ft.id = cf.field_type
 										LEFT JOIN
 											pipelines p 
 										ON 
@@ -458,7 +452,14 @@ router.get('/api/select/lead/:id', async function(req, res){
 												ANY_VALUE(c.resp_user_id) AS resp_user_id,
 												ANY_VALUE(c.group_id) AS group_id,
 												ANY_VALUE(lcom.name) AS company_name,
-												JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 'name', cf.name, 'value_id', cv.id, 'value', cv.value, 'cf_type', cfl.name)) custom_fields
+												JSON_ARRAYAGG(JSON_OBJECT('id', cf.id, 
+																		  'name', cf.name, 
+																		  'type', ft.name, 
+																		  'value', JSON_OBJECT('cf_id', cf.id, 
+																								'name', cf.name, 
+																								'value_id', cv.id, 
+																								'value', cv.value, 
+																								'cf_type', cfl.name))) custom_fields
 											FROM
 												leads_contacts lc
 											LEFT JOIN
@@ -486,13 +487,15 @@ router.get('/api/select/lead/:id', async function(req, res){
 											ON
 												cf.id = cv.field_id
 											LEFT JOIN 
+												field_type ft 
+											ON 
+												ft.id = cf.field_type
+											LEFT JOIN 
 												custom_fields_list cfl 
 											ON 
 												cfl.id = cv.list_id
 											WHERE 
 												l.id = ${id}
-											AND
-												cf.lcc_id = 2
 											GROUP BY
 									   			lc.contact_id`)
 		var selectCompany = await con.query(`SELECT
@@ -504,7 +507,14 @@ router.get('/api/select/lead/:id', async function(req, res){
 												lc.amo_id amo_id, 
 												lc.resp_user_id resp_user_id,
 												lc.group_id group_id, 
-												JSON_ARRAYAGG(JSON_OBJECT('cf_id', cf.id, 'name', cf.name, 'value_id', lcv.id, 'value', lcv.value, 'cf_type', cfl.name)) custom_fields
+												JSON_ARRAYAGG(JSON_OBJECT('id', cf.id, 
+																		  'name', cf.name, 
+																		  'type', ft.name, 
+																		  'value', JSON_OBJECT('cf_id', cf.id, 
+																		  						'name', cf.name, 
+																		  						'value_id', lcv.id, 
+																		  						'value', lcv.value, 
+																		  						'cf_type', cfl.name))) custom_fields
 											FROM
 												leads_company lc
 											LEFT JOIN 
@@ -520,14 +530,17 @@ router.get('/api/select/lead/:id', async function(req, res){
 											ON 
 												cf.id = lcv.field_id
 											LEFT JOIN 
+												field_type ft 
+											ON 
+												ft.id = cf.field_type
+											LEFT JOIN 
 												custom_fields_list cfl 
 											ON 
 												cfl.id = lcv.list_id
 											WHERE 
 												l.id = ${id}
 											GROUP BY 
-												lc.id
-											`)
+												lc.id`)
 		
 		var selectUser = await con.query(`SELECT 
 											ug.name user_group,
@@ -632,9 +645,124 @@ router.get('/api/select/lead/:id', async function(req, res){
 											                    "value": null,
 											                    "cf_type": null,
 											                    "value_id": null};
+
 				})
 			});
 		}
+		if(selectContact.length !== 0){
+			selectContactCF.forEach(c => {
+				c.custom_fields_list.forEach(x => {
+					for(var j = 0; j < selectContact.length; j++){
+						let i = selectContact[j].custom_fields.map(y => {return y.id}).indexOf(x.id);
+						if (i == -1) {
+							selectContact[j].custom_fields.push(x)
+							x.value = selectContact[j].custom_fields[i] || {"name": null,
+														                    "cf_id": null,
+														                    "value": null,
+														                    "cf_type": null,
+														                    "value_id": null};
+						}
+					}
+				});
+			});
+		}
+		if(selectCompany.length !== 0){
+			selectCompanyCF.forEach(c=> {
+				c.custom_fields_list.forEach(x => {
+					let i = selectCompany[0].custom_fields.map(y => {return y.id}).indexOf(x.id);
+					if (i == -1) {
+						 selectCompany[0].custom_fields.push(x);
+						 x.value = selectCompany[0].custom_fields[i] || {"name": null,
+														                    "cf_id": null,
+														                    "value": null,
+														                    "cf_type": null,
+														                    "value_id": null};
+					}
+				});
+			});
+		};
+		res.status(200).json({
+			selectLead:selectLead[0],
+			selectContact,
+			selectCompany:selectCompany[0],
+			selectUser,
+			selectCardGroups,
+			selectContactCF,
+			selectCompanyCF
+		})
+	}catch(e){
+		console.log(e)
+		res.status(500).send(e);
+	}
+});
+
+router.get('/api/select/contact/:contact_id', async function(req, res){
+	var id = req.params.contact_id;
+	try{	
+		var selectContact = await con.query(`SELECT 
+												c.id contact_id,
+												c.name contact_name,
+												c.created_at created_at,
+												c.updated_at updated_at,
+												c.created_by created_by,
+												c.amo_id amo_id,
+												c.resp_user_id resp_user_id,
+												c.group_id group_id,
+												JSON_ARRAYAGG(JSON_OBJECT('cf_id', cv.field_id, 'name', cf.name, 'value_id', cv.id, 'value', cv.value, 'cf_type', cfl.name)) custom_fields
+											FROM
+												contacts c 
+										  	LEFT JOIN 
+												contacts_value cv
+											ON
+												c.id = cv.contact_id
+											LEFT JOIN
+												custom_fields cf
+											ON
+												cf.id = cv.field_id
+											LEFT JOIN 
+												custom_fields_list cfl 
+											ON 
+												cfl.id = cv.list_id
+											WHERE 
+												c.id = ${id}
+											GROUP BY
+                        						cv.id`);
+		selectContact.forEach(i =>{
+			i.custom_fields = JSON.parse(i.custom_fields)
+		});
+
+		for(let i = 0; i < selectContact[0].custom_fields.length - 2; i++){
+			for(let j = i+1; j < selectContact[0].custom_fields.length - 1; j++){
+				if(selectContact[0].custom_fields[i].name == selectContact[0].custom_fields[j].name){
+					selectContact[0].custom_fields[i].value += ', ' + selectContact[0].custom_fields[j].value;
+					selectContact[0].custom_fields[i].cf_type += ', ' + selectContact[0].custom_fields[j].cf_type;
+					selectContact[0].custom_fields.splice(j, 1);
+					j--;
+				}
+			}
+		}
+		var selectContactCF = await con.query(`SELECT 
+												cg.id,
+												cg.name,
+												JSON_ARRAYAGG(JSON_OBJECT('id', cf.id, 'name', cf.name, 'type', ft.name)) custom_fields_list
+											FROM
+												custom_fields cf
+											LEFT JOIN 
+												card_groups cg
+											ON
+												cg.id = cf.group_id
+											LEFT JOIN 
+												field_type ft 
+											ON 
+												ft.id = cf.field_type
+											WHERE
+												cf.lcc_id = 2
+											GROUP BY 
+												cg.id`);
+		
+		selectContactCF.forEach(c => {
+			c.custom_fields_list = JSON.parse(c.custom_fields_list)
+		});
 		if(selectContactCF){
 			selectContactCF.forEach(c=> {
 				c.custom_fields_list.forEach(x => {
@@ -649,34 +777,51 @@ router.get('/api/select/lead/:id', async function(req, res){
 				});
 			});
 		}
-		if(selectCompanyCF){
-			selectCompanyCF.forEach(c=> {
-				c.custom_fields_list.forEach(x => {
-					if(selectCompany[0]){
-						let i = selectCompany[0].custom_fields.map(y => {return y.cf_id}).indexOf(x.id);
-						x.value = selectCompany[0].custom_fields[i] || {"name": null,
-													                    "cf_id": null,
-													                    "value": null,
-													                    "cf_type": null,
-													                    "value_id": null};
-					}
-				});
-			});
-		}
+		/*selectContact.forEach(i =>{
+			i.leads = JSON.parse(i.leads)
+		});*/
 		res.status(200).json({
-			selectLead:selectLead[0],
 			selectContact:selectContact[0],
-			selectCompany:selectCompany[0],
-			selectUser,
-			selectCardGroups,
-			selectContactCF,
-			selectCompanyCF
+			selectContactCF:selectContactCF[0]
 		})
 	}catch(e){
-		console.log(e)
+		console.log(e);
 		res.status(500).send(e);
 	}
 });
+
+router.get('/api/select/company/:company_id', async function(req, res){
+	var id = req.params.company_id;
+	try{
+		var selectCompany = await con.query(`SELECT
+												lc.id company_id,
+												lc.name company_name,
+												lc.created_at created_at,
+												lc.updated_at updated_at,
+												lc.created_by created_by,
+												lc.amo_id amo_id,
+												lc.resp_user_id resp_user_id,
+												lc.group_id group_id,
+												JSON_ARRAYAGG(JSON_OBJECT('id', lcv.id, 'name', lcv.value, 'field_id', lcv.field_id)) custom_fields
+											FROM 
+												leads_company lc
+											LEFT JOIN 
+												leads_company_value lcv 
+											ON 
+												lcv.leads_company_id = lc.id
+											WHERE 
+												lc.id = ${id}`);
+		selectCompany.forEach(x=>{
+			x.custom_fields = JSON.parse(x.custom_fields);
+		})
+		res.status(200).json({
+			selectCompany
+		})
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+})
 
 router.get('/api/list/contact', async function(req, res){
 	try{
@@ -786,6 +931,10 @@ router.get('/api/select/newlead', async function(req, res){
 													card_groups cg 
 												ON 
 													cg.id = cf.group_id
+												WHERE NOT 
+													cf.lcc_id = 2
+												AND NOT
+													cf.lcc_id = 3
 												GROUP BY 
 													cg.id`)
 		selectPipe.forEach(c => {
@@ -840,78 +989,89 @@ router.put('/api/update/lead/:id', async function(req, res){
 												WHERE
 													l.id = ${lead_id}`);
 			for(let i = 0; i < data.selectCardGroups.length; i++){
-				for(let x = 0; x < data.selectCardGroups[i].custom_fields_list.length; x++){
-					if(data.selectLead.custom_fields.find(k =>{
-						return k.value_id == data.selectCardGroups[i].custom_fields_list[x].value.value_id
-					})){
-						var updateLeadCF = await con.query(`UPDATE 
-																leads_value
-															SET
-																value = ${data.selectCardGroups[i].custom_fields_list[x].value.value}
+				for(let j = 0; j < data.selectCardGroups[i].custom_fields_list.length; j++){
+					if(data.selectCardGroups[i].custom_fields_list[j].value.value !== null){
+						var selectLeadCF = await con.query(`SELECT 
+																*
+															FROM 
+																leads_value 
 															WHERE 
-																leads_id = ${lead_id}
-															AND
-																field_id = ${data.selectCardGroups[i].custom_fields_list[x].id}`)
-						console.log(updateLeadCF)
-					}else{
-						var insertLeadCF = await con.query(`INSERT INTO 
-																leads_value (value, field_id, leads_id)
-															VALUES(?, ?, ?)`, [data.selectCardGroups[i].custom_fields_list[x].value.value,
-																				data.selectCardGroups[i].custom_fields_list[x].id,
-																				lead_id])
-						console.log(insertLeadCF)
-					}
-				}
-			}
-		}
-		if(data.selectContact){
-			dateContact = new Date(data.selectContact.created_at).valueOf();
-			var updateContact = await con.query(`UPDATE 
-													contacts c 
-												LEFT JOIN 
-													leads_contacts lc 
-												ON 
-													c.id = lc.contact_id
-												LEFT JOIN 
-													leads l 
-												ON 
-													l.id = lc.leads_id
-												SET
-													c.name = '${data.selectContact.contact_name}',
-													c.created_at = FROM_UNIXTIME(${dateContact}),
-													c.updated_at = NOW(),
-													c.created_by = ${data.selectContact.created_by},
-													c.amo_id = ${data.selectContact.amo_id},
-													c.resp_user_id = ${data.selectContact.resp_user_id},
-													c.group_id = ${data.selectContact.group_id}
-												WHERE 
-													l.id = ${lead_id}`);
-			for(let i = 0; i < data.selectContactCF.length; i++){
-				for(let x = 0; x < data.selectContactCF[i].custom_fields_list.length; x++){
-					if(data.selectContact.custom_fields.find(k =>{
-						return k.value_id == data.selectContactCF[i].custom_fields_list[x].value.value_id
-					})){
-						var updateContactCF = await con.query(`UPDATE 
-																	contacts_value
+																id = ${data.selectCardGroups[i].custom_fields_list[j].value.value_id}`)
+						if(selectLeadCF.length == 0 && data.selectCardGroups[i].custom_fields_list[j].value.value_id == null){
+							var insertLeadCF = await con.query(`INSERT INTO 
+																	leads_value (value, field_id, leads_id)
+																VALUES(?, ?, ?)`, [data.selectCardGroups[i].custom_fields_list[j].value.value,
+																					data.selectCardGroups[i].custom_fields_list[j].id,
+																					lead_id])
+						}else{
+							var updateLeadCF = await con.query(`UPDATE 
+																	leads_value
 																SET
-																	value = ${data.selectContactCF[i].custom_fields_list[x].value.value}
+																	value = '${data.selectCardGroups[i].custom_fields_list[j].value.value}'
 																WHERE 
-																	contact_id = ${data.selectContact.contact_id}
+																	leads_id = ${lead_id}
 																AND
-																	field_id = ${data.selectContactCF[i].custom_fields_list[x].id}`)
-						console.log(updateContactCF)
-					}else{
-						var insertContactCF = await con.query(`INSERT INTO 
-																	contacts_value (field_id, value, contact_id)
-																VALUES(?, ?, ?)`, [data.selectContactCF[i].custom_fields_list[x].value.value,
-																					data.selectContactCF[i].custom_fields_list[x].id,
-																					data.selectContact.contact_id])
-						console.log(insertContactCF)
+																	field_id = ${data.selectCardGroups[i].custom_fields_list[j].id}`)
+						}
+					}
+
+				}
+				
+			}
+		}
+		if(data.selectContact.length !== 0){
+			for(let i = 0; i < data.selectContact.length; i++){
+				dateContact = new Date(data.selectContact[i].created_at).valueOf();
+				var updateContact = await con.query(`UPDATE 
+														contacts c 
+													LEFT JOIN 
+														leads_contacts lc 
+													ON 
+														c.id = lc.contact_id
+													LEFT JOIN 
+														leads l 
+													ON 
+														l.id = lc.leads_id
+													SET
+														c.name = '${data.selectContact[i].contact_name}',
+														c.created_at = FROM_UNIXTIME(${dateContact}),
+														c.updated_at = NOW(),
+														c.created_by = ${data.selectContact[i].created_by},
+														c.amo_id = ${data.selectContact[i].amo_id},
+														c.resp_user_id = ${data.selectContact[i].resp_user_id},
+														c.group_id = ${data.selectContact[i].group_id}
+													WHERE 
+														l.id = ${lead_id}`);
+			
+				for(let x = 0; x < data.selectContact[i].custom_fields.length; x++){
+					if(data.selectContact[i].custom_fields[x].value.value !== null){
+						let selectContactCF = await con.query(`SELECT 
+																	id
+																FROM
+																	contacts_value 
+																WHERE 
+																	id = ${data.selectContact[i].custom_fields[x].value.value_id}`)
+						if(selectContactCF.length == 0 && data.selectContact[i].custom_fields[x].value.value_id == null){
+							var insertContactCF = await con.query(`INSERT INTO 
+																		contacts_value (field_id, value, contact_id)
+																	VALUES(?, ?, ?)`, [data.selectContact[i].custom_fields[x].id,
+																						data.selectContact[i].custom_fields[x].value.value,
+																						data.selectContact[i].contact_id])
+						}else{
+							var updateContactCF = await con.query(`UPDATE 
+																		contacts_value
+																	SET
+																		value = '${data.selectContact[i].custom_fields[x].value.value}'
+																	WHERE 
+																		contact_id = ${data.selectContact[i].contact_id}
+																	AND
+																		field_id = ${data.selectContact[i].custom_fields[x].id}`)
+						}
 					}
 				}
 			}
 		}
-		if(data.selectCompany){
+		if(data.selectCompany !== 0){
 			dateCompany = new Date(data.selectCompany.created_at).valueOf();
 			var updateCompany = await con.query(`UPDATE
 													leads_company lc
@@ -929,27 +1089,30 @@ router.put('/api/update/lead/:id', async function(req, res){
 													lc.group_id = ${data.selectCompany.group_id}
 												WHERE 
 													l.id = ${lead_id}`);
-			for(let i = 0; i < data.selectCompanyCF.length; i++){
-				for(let x = 0; x < data.selectCompanyCF[i].custom_fields_list.length; x++){
-					if(data.selectCompany.custom_fields.find(k =>{
-						return k.value_id == data.selectCompanyCF[i].custom_fields_list[x].value.value_id
-					})){
-						var updateCompanyCF = await con.query(`UPDATE 
+			
+			for(let x = 0; x < data.selectCompany.custom_fields.length; x++){
+				if(data.selectCompany.custom_fields[x].value.value !== null){
+					let selectCompanyCF = await con.query(`SELECT 
+																*
+															FROM
+																leads_company_value 
+															WHERE 
+																id = ${data.selectCompany.custom_fields[x].value.value_id}`)
+					if(selectCompanyCF.length == 0 && data.selectCompany.custom_fields[x].value.value_id == null){
+						let insertCompanyCF = await con.query(`INSERT INTO
+																	leads_company_value(field_id, value, leads_company_id)
+																VALUES(?, ?, ?)`, [data.selectCompany.custom_fields[x].id,
+																					data.selectCompany.custom_fields[x].value.value,
+																					data.selectCompany.company_id])
+					}else{
+						let updateCompanyCF = await con.query(`UPDATE 
 																	leads_company_value
 																SET
-																	value = ${data.selectCompanyCF[i].custom_fields_list[x].value.value}
+																	value = '${data.selectCompany.custom_fields[x].value.value}'
 																WHERE 
 																	leads_company_id = ${data.selectCompany.company_id}
 																AND
-																	field_id = ${data.selectCompanyCF[i].custom_fields_list[x].id}`)
-						console.log(updateCompanyCF)
-					}else{
-						var insertCompanyCF = await con.query(`INSERT INTO
-																	leads_company_value(field_id, value, leads_company_id)
-																VALUES(?, ?, ?)`, [data.selectCompanyCF[i].custom_fields_list[x].value.value,
-																					data.selectCompanyCF[i].custom_fields_list[x].id,
-																					data.selectCompany.company_id])
-						console.log(insertCompanyCF)
+																	field_id = ${data.selectCompany.custom_fields[x].id}`)
 					}
 				}
 			}
@@ -1170,6 +1333,21 @@ router.get('/api/select/task', async function (req, res) {
 	}
 });
 
+router.get('/api/filter', async function(req, res){
+	var key = req.body.key;
+	try{
+		var select = await con.query(`SELECT 
+
+									FROM
+										leads
+									LEFT JOIN
+										`)
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+})
+
 router.post('/api/like/:table', async function(req, res){
 	var table = req.params.table;
 	var like = req.body.like;
@@ -1220,37 +1398,6 @@ router.post('/api/where/:table/:from', async function(req, res){
 		res.send(e);
 	}
 });
-
-router.post('/api/updat/:table', async function(req, res){
-	var table = req.params.table;
-	var data = req.body;
-	for(var key in data){
-		if(key == 'created' || key == "changed" || key == 'finished'){
-			delete data[key]
-		}
-	}
-	try{
-		if(table == 'leads' || table == 'contacts' || table == 'leads_company'){
-			var select = await query.select({table: table, where: {id: data.id}});
-			select = select[0];
-
-			for(var key in select){
-				if(key == 'created_at' || key == 'updated_at' || key == 'comlete_till'){
-					delete data[key]
-				}
-			}
-			data.updated_at = new Date();
-			var update = await query.update({table: table, where: {id: data.id}, data: data});
-		} else {
-			var update = await query.update({table: table, where: {id: data.id}, data: data});
-		}
-		
-		res.send();
-	} catch(e){
-		res.status(500).send();
-		throw new Error(e);
-	}
-})
 
 router.post('/api/count/:table', async function(req, res){
 	var table = req.params.table;
