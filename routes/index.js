@@ -936,7 +936,43 @@ router.get('/api/select/newlead', async function(req, res){
 												AND NOT
 													cf.lcc_id = 3
 												GROUP BY 
-													cg.id`)
+													cg.id`);
+		var selectContactCF = await con.query(`SELECT 
+												cg.id,
+												cg.name,
+												JSON_ARRAYAGG(JSON_OBJECT('id', cf.id, 'name', cf.name, 'type', ft.name)) custom_fields_list
+											FROM
+												custom_fields cf
+											LEFT JOIN 
+												card_groups cg
+											ON
+												cg.id = cf.group_id
+											LEFT JOIN 
+												field_type ft 
+											ON 
+												ft.id = cf.field_type
+											WHERE
+												cf.lcc_id = 2
+											GROUP BY 
+												cg.id`);
+		var selectCompanyCF = await con.query(`SELECT 
+												cg.id,
+												cg.name,
+												JSON_ARRAYAGG(JSON_OBJECT('id', cf.id, 'name', cf.name, 'type', ft.name)) custom_fields_list
+											FROM
+												custom_fields cf
+											LEFT JOIN 
+												card_groups cg
+											ON
+												cg.id = cf.group_id
+											LEFT JOIN 
+												field_type ft 
+											ON 
+												ft.id = cf.field_type
+											WHERE
+												cf.lcc_id = 3
+											GROUP BY 
+												cg.id`)
 		selectPipe.forEach(c => {
 			c.steps = JSON.parse(c.steps)
 		});
@@ -946,7 +982,23 @@ router.get('/api/select/newlead', async function(req, res){
 		selectCardGroups.forEach(c => {
 			c.custom_fields_list = JSON.parse(c.custom_fields_list)
 		});
+		selectContactCF.forEach(c => {
+			c.custom_fields_list = JSON.parse(c.custom_fields_list)
+		});
+		selectCompanyCF.forEach(c => {
+			c.custom_fields_list = JSON.parse(c.custom_fields_list)
+		});
 		selectCardGroups.forEach(c=> {
+			c.custom_fields_list.forEach(x => {
+				x.value = {"value":''};
+			})
+		});
+		selectContactCF.forEach(c=> {
+			c.custom_fields_list.forEach(x => {
+				x.value = {"value":''};
+			})
+		});
+		selectCompanyCF.forEach(c=> {
 			c.custom_fields_list.forEach(x => {
 				x.value = {"value":''};
 			})
@@ -954,7 +1006,9 @@ router.get('/api/select/newlead', async function(req, res){
 		res.status(200).json({
 			selectPipe,
 			selectCardGroups,
-			selectUser
+			selectUser,
+			selectContactCF,
+			selectCompanyCF
 		})
 	}catch(e){
 		console.log(e);
@@ -970,13 +1024,11 @@ router.put('/api/update/lead/:id', async function(req, res){
 	var dateCompany = {};
 	try{
 		if(data.selectLead){
-			dateLead = new Date(data.selectLead.created_at).valueOf();
 			var updateLead = await con.query(`UPDATE 
 													leads l
 												SET
 													l.name = '${data.selectLead.lead_name}',
 													l.budget = '${data.selectLead.budget}',
-													l.created_at = FROM_UNIXTIME(${dateLead}),
 													l.updated_at = NOW(),
 													l.pipeline_id = '${data.selectLead.pipe_id}',
 													l.status = '${data.selectLead.step_id}',
@@ -1021,7 +1073,6 @@ router.put('/api/update/lead/:id', async function(req, res){
 		}
 		if(data.selectContact.length !== 0){
 			for(let i = 0; i < data.selectContact.length; i++){
-				dateContact = new Date(data.selectContact[i].created_at).valueOf();
 				var updateContact = await con.query(`UPDATE 
 														contacts c 
 													LEFT JOIN 
@@ -1034,7 +1085,6 @@ router.put('/api/update/lead/:id', async function(req, res){
 														l.id = lc.leads_id
 													SET
 														c.name = '${data.selectContact[i].contact_name}',
-														c.created_at = FROM_UNIXTIME(${dateContact}),
 														c.updated_at = NOW(),
 														c.created_by = ${data.selectContact[i].created_by},
 														c.amo_id = ${data.selectContact[i].amo_id},
@@ -1072,7 +1122,6 @@ router.put('/api/update/lead/:id', async function(req, res){
 			}
 		}
 		if(data.selectCompany !== 0){
-			dateCompany = new Date(data.selectCompany.created_at).valueOf();
 			var updateCompany = await con.query(`UPDATE
 													leads_company lc
 												LEFT JOIN 
@@ -1081,7 +1130,6 @@ router.put('/api/update/lead/:id', async function(req, res){
 													l.leads_company_id = lc.id
 												SET 
 													lc.name = '${data.selectCompany.company_name}',
-													lc.created_at = FROM_UNIXTIME(${dateCompany}),
 													lc.updated_at = NOW(),
 													lc.created_by = ${data.selectCompany.created_by},
 													lc.amo_id = ${data.selectCompany.amo_id},
@@ -1124,18 +1172,6 @@ router.put('/api/update/lead/:id', async function(req, res){
 	}
 });
 
-/*router.post('/api/insert/newlead', async function(req, res){
-	try{
-		var insertLead = await con.query(`INSERT INTO
-											leads (name, budget, resp_user_id, created_at, updated_at, group_id, status, pipeline_id)`)
-		res.status(200).send();
-	}catch(e){
-		console.log(e);
-		res.status(500).send(e);
-	}
-});*/
-
-//select all leads
 router.get('/api/select/all', async function(req, res){
 	try{
 		var select = await con.query(`SELECT 
@@ -1238,37 +1274,42 @@ router.post('/api/insert/fast', async function(req, res){
 		var step = req.body.s_id;
 		var date = new Date();
 		var insertLead = await con.query(`INSERT INTO 
-											leads (name, budget, created_at, updated_at, pipeline_id, status)
-										VALUES(?, ?, ?, ?, ?, ?)`, [req.body.lead_title, req.body.lead_const, date, date, pipe, step])
-		insertLead = insertLead.insertId.toString();
+											leads (name, budget, created_at, updated_at,  pipeline_id, status, is_deleted)
+										VALUES(?, ?, ?, ?, ?, ?, 0)`, [req.body.lead_title, req.body.lead_const, date, date, pipe, step])
+		insertLead = insertLead.insertId;
+		console.log('1', insertLead)
 
 		if(lead_contact){
 			var insertContact = await con.query(`INSERT INTO
 												contacts (name, created_at, updated_at)
 											VALUES(?, ?, ?)`, [lead_contact, date, date])
-			insertContact = insertContact.insertId.toString();			
+			insertContact = insertContact.insertId;
+			console.log('2', insertContact)	
 		}
 
 		if(insertContact){
 			var insertDir = await con.query(`INSERT INTO
 												leads_contacts (leads_id, contact_id)
 											VALUES(?, ?)`, [insertLead, insertContact])
+			console.log('3', insertDir)
 		}
 		console.log(insertContact)
 		if(lead_phone){
 			var insertPhone = await con.query(`INSERT INTO
 			 									contacts_value (value, field_id, contact_id)
 			 								VALUES(?, 58, ?)`, [lead_phone, insertContact])
-			console.log(insertPhone)
+			console.log('4', insertPhone)
 		}
 		if(lead_email){
 			var insertEmail = await con.query(`INSERT INTO
 			 									contacts_value (value, field_id, contact_id)
 			 								VALUES(?, 59, ?)`, [lead_email, insertContact])
+			console.log('5', insertEmail)
 		}
 		res.status(200).json({
 			insertLead,
 			insertContact,
+			insertDir,
 			insertPhone,
 			insertEmail
 		});
@@ -1334,14 +1375,98 @@ router.get('/api/select/task', async function (req, res) {
 });
 
 router.get('/api/filter', async function(req, res){
-	var key = req.body.key;
+	var text = req.body.text;
 	try{
-		var select = await con.query(`SELECT 
+		var selectLead = await con.query(`SELECT 
+											ANY_VALUE(l.id) AS leads_id,
+											ANY_VALUE(l.name) AS leads_name,
+											ANY_VALUE(p.id) AS pipe_id,
+											ANY_VALUE(p.name) AS pipe_name,
+											ANY_VALUE(s.id) AS step_id,
+											ANY_VALUE(s.name) AS step_name,
+											ANY_VALUE(c.id) AS contact_id,
+											ANY_VALUE(c.name) AS contact_name,
+											ANY_VALUE(lc.id) AS company_id,
+											ANY_VALUE(lc.name) AS company_name
+										FROM
+											leads l
+										LEFT JOIN 
+											contacts c
+										ON 
+											c.id = l.main_contact_id
+										LEFT JOIN
+											leads_company lc
+										ON 
+											lc.id = l.leads_company_id
+										LEFT JOIN
+											pipelines p
+										ON 
+											p.id = l.pipeline_id
+										LEFT JOIN
+											step s
+										ON 
+											s.id = l.status
+										WHERE 
+											l.name
+										LIKE 
+											'${text}%'`);
+		var selectContact = await con.query(`SELECT 
+												c.id contact_id,
+												c.name contact_name,
+												lc.id company_id,
+												lc.name company_name
+											FROM
+												contacts c 
+											LEFT JOIN 
+												leads_company_contacts lcc
+											ON 
+												lcc.contact_id = c.id
+											LEFT JOIN 
+												leads_company lc 
+											ON 
+												lc.id = lcc.leads_company_id
+											WHERE 
+												c.name
+											LIKE
+												'${text}%'`);
+		var selectCompany = await con.query(`SELECT 
+												lc.id company_id,
+												lc.name company_name,
+												c.id contact_id,
+												c.name contact_name
+											FROM
+												leads_company lc 
+											LEFT JOIN 
+												leads_company_contacts lcc
+											ON 
+												lcc.leads_company_id = lc.id
+											LEFT JOIN 
+												contacts c 
+											ON 
+												c.id = lcc.contact_id
+											WHERE 
+												lc.name
+											LIKE
+												'${text}%'`)
+		res.status(200).json({
+			selectLead,
+			selectContact,
+			selectCompany
+		});
+	}catch(e){
+		console.log(e);
+		res.status(500).send(e);
+	}
+})
 
-									FROM
-										leads
-									LEFT JOIN
-										`)
+router.post('/api/insert/contact', async function(req, res){
+	try{
+		var insertContact = await con.query(`INSERT INTO 
+												contacts(name, created_at, updated_at)
+											VALUES(?, NOW(), NOW())`, [req.body.name]);
+		var insertContactCF = await con.query(`INSERT INTO 
+												contacts_value()`)
+		res.status(200).send();
 	}catch(e){
 		console.log(e);
 		res.status(500).send(e);
